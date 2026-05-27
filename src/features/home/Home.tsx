@@ -8,7 +8,7 @@ import { FlaggedEmails } from './FlaggedEmails'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { syncCalendarEvents } from '../../lib/google'
-import { buildDemoTasks, buildDemoEvents } from '../../lib/demoLocal'
+import { buildDemoTasks, buildDemoEvents, toggleDemoTaskCompletion } from '../../lib/demoLocal'
 import type { Task, FamilyEvent, Member } from '../../types'
 
 export function Home() {
@@ -80,10 +80,11 @@ export function Home() {
     syncCalendarEvents(familyId, user.id, members).then(loadData).catch(() => {})
   }, [familyId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Local-only task toggle for demo mode (no Supabase write needed)
+  // Local-only task toggle for demo mode — persists to localStorage
   const handleDemoToggle = useCallback((taskId: string) => {
+    const nowDone = toggleDemoTaskCompletion(taskId)
     setTasks((prev) =>
-      prev.map((t) => t.id === taskId ? { ...t, done: !t.done } : t)
+      prev.map((t) => t.id === taskId ? { ...t, done: nowDone } : t)
     )
   }, [])
 

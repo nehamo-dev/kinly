@@ -18,6 +18,25 @@ import { AuthCallback } from '../features/calendar/AuthCallback'
 
 const queryClient = new QueryClient()
 
+// ── FamilyId localStorage cache ───────────────────────────────────────────────
+// Supabase free tier pauses projects after ~1 week of inactivity. When paused,
+// all network calls (including loadFamilyId) can hang for 20-30 s. By caching
+// the familyId in localStorage we can restore the authenticated state instantly
+// on hard-refresh, then validate/update in the background once Supabase wakes.
+const FAMILY_CACHE_KEY = 'kinly-family-id'
+
+function getCachedFamilyId(): string | null {
+  try { return localStorage.getItem(FAMILY_CACHE_KEY) } catch { return null }
+}
+function setCachedFamilyId(id: string): void {
+  try { localStorage.setItem(FAMILY_CACHE_KEY, id) } catch {}
+}
+function clearCachedFamilyId(): void {
+  try { localStorage.removeItem(FAMILY_CACHE_KEY) } catch {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession, setFamilyId, setIsDemo } = useAuthStore()
   const [ready, setReady] = useState(false)
@@ -26,16 +45,14 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     let done = false
     const markReady = () => { if (!done) { done = true; setReady(true) } }
 
-    // ── Fast path: local-only demo mode ────────────────────────────────────
-    // If demo state is persisted in localStorage we can restore instantly
-    // without touching Supabase at all — avoids cold-start hang.
+    // ── Fast path A: local demo mode ───────────────────────────────────────
     const demo = getDemoState()
     if (demo?.familyId) {
       setFamilyId(demo.familyId)
       setIsDemo(true)
       markReady()
 
-      // Still watch for a real sign-in so we can switch out of demo
+      // Watch for real sign-in so we can swap out of demo
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user && !session.user.is_anonymous) {
           clearDemoState()
@@ -48,37 +65,52 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       return () => subscription.unsubscribe()
     }
 
-    // ── Normal path: Supabase auth ─────────────────────────────────────────
-    // Failsafe reduced to 2 s (was 5 s) — Supabase cold-start is slow on
-    // the free tier; we'd rather show the Welcome page quickly and let the
-    // user proceed than block on a potentially sleeping DB.
+    // ── Fast path B: cached familyId for real sessions ────────────────────
+    // getSession() reads the JWT from localStorage (no network if token is
+    // still valid). If we also have a cached familyId we can call markReady()
+    // immediately and let loadFamilyId() validate in the background.
+    // This means hard-refresh feels instant even when Supabase is paused.
+    const cachedFamilyId = getCachedFamilyId()
+
+    // Failsafe — 2 s ceiling before we show the page regardless
     const failsafe = setTimeout(markReady, 2000)
 
     supabase.auth.getSession()
       .then(async ({ data: { session } }) => {
         setSession(session)
+
         if (session?.user) {
-          await loadFamilyId(session.user.id).catch(() => {})
+          // Apply cached familyId right away so ProtectedRoute can render
+          if (cachedFamilyId) {
+            setFamilyId(cachedFamilyId)
+            markReady() // unblock UI immediately — don't wait for network
+          }
+
+          // Background: validate & refresh the cache from Supabase
+          loadFamilyId(session.user.id).catch(() => {})
+
           if (session.user.is_anonymous) {
             const store = useAuthStore.getState()
             if (!store.familyId) {
               // Stale anonymous session with no family — clear and send to Welcome
               setSession(null)
               setFamilyId(null)
+              clearCachedFamilyId()
               supabase.auth.signOut().catch(() => {})
               window.location.replace('/welcome')
               return
             }
             setIsDemo(true)
           }
+        } else {
+          // No session — clear any stale cache
+          clearCachedFamilyId()
         }
       })
       .catch(() => {})
       .finally(() => { clearTimeout(failsafe); markReady() })
 
     // Listen for subsequent auth changes (sign-in, sign-out, token refresh)
-    // Do NOT do stale-session cleanup here — this fires during demo seed before
-    // the family has been created, which would incorrectly boot the user out.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       if (session?.user) {
@@ -87,6 +119,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setFamilyId(null)
         setIsDemo(false)
+        clearCachedFamilyId()
       }
     })
 
@@ -100,7 +133,10 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('user_id', userId)
       .limit(1)
       .single()
-    if (data?.family_id) setFamilyId(data.family_id)
+    if (data?.family_id) {
+      setCachedFamilyId(data.family_id)  // keep cache fresh
+      setFamilyId(data.family_id)
+    }
   }
 
   if (!ready) return (

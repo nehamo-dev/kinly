@@ -1,71 +1,94 @@
 /**
  * demoLocal.ts — local-only demo mode, zero Supabase.
  *
- * Instead of signInAnonymously() + seeding real DB rows (which requires
- * Supabase to be awake), demo mode now stores a flag in localStorage and
- * synthesises Task[]/FamilyEvent[] from the static DEMO_* constants.
- * Navigation to "/" is instant; no network call is needed.
+ * Demo mode stores its state in two localStorage keys:
+ *   kinly-demo          → { familyId } — marks the session as demo
+ *   kinly-demo-done     → string[]     — completed task IDs (persists across refresh)
  */
 import { format, subDays, addDays } from 'date-fns'
 import { DEMO_TASKS, DEMO_EVENTS } from './demo'
 import type { Task, FamilyEvent } from '../types'
 
-// Sentinel family id used in all local demo objects
 export const DEMO_FAMILY_ID = 'demo-local'
 
-const STORAGE_KEY = 'kinly-demo'
+const DEMO_KEY      = 'kinly-demo'
+const COMPLETED_KEY = 'kinly-demo-done'
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
+// ── Demo session ──────────────────────────────────────────────────────────────
 
 interface StoredDemo { familyId: string }
 
 export function getDemoState(): StoredDemo | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(DEMO_KEY)
     return raw ? (JSON.parse(raw) as StoredDemo) : null
   } catch { return null }
 }
 
 export function saveDemoState(): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ familyId: DEMO_FAMILY_ID }))
+    localStorage.setItem(DEMO_KEY, JSON.stringify({ familyId: DEMO_FAMILY_ID }))
   } catch {}
 }
 
 export function clearDemoState(): void {
-  try { localStorage.removeItem(STORAGE_KEY) } catch {}
+  try {
+    localStorage.removeItem(DEMO_KEY)
+    localStorage.removeItem(COMPLETED_KEY)
+  } catch {}
 }
 
-// ── Data builders — convert DEMO_* constants → typed domain objects ──────────
+// ── Task completion persistence ───────────────────────────────────────────────
+
+function getCompletedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(COMPLETED_KEY)
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+  } catch { return new Set() }
+}
+
+/** Toggles a task's completion in localStorage. Returns the new done state. */
+export function toggleDemoTaskCompletion(taskId: string): boolean {
+  const ids = getCompletedIds()
+  const nowDone = !ids.has(taskId)
+  if (nowDone) { ids.add(taskId) } else { ids.delete(taskId) }
+  try { localStorage.setItem(COMPLETED_KEY, JSON.stringify([...ids])) } catch {}
+  return nowDone
+}
+
+// ── Data builders ─────────────────────────────────────────────────────────────
 
 const TODAY = new Date()
 const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
 
 function urgencyToDueDate(urgency: 'Overdue' | 'Today' | 'This week'): string {
   switch (urgency) {
-    case 'Overdue':    return fmt(subDays(TODAY, 3))
-    case 'Today':      return fmt(TODAY)
-    case 'This week':  return fmt(addDays(TODAY, 5))
+    case 'Overdue':   return fmt(subDays(TODAY, 3))
+    case 'Today':     return fmt(TODAY)
+    case 'This week': return fmt(addDays(TODAY, 5))
   }
 }
 
+/** Builds Task[] from constants, applying any saved completion state. */
 export function buildDemoTasks(): Task[] {
-  return DEMO_TASKS.map((dt, i) => ({
-    id: `demo-task-${i}`,
-    family_id: DEMO_FAMILY_ID,
-    event_id: null,
-    title: dt.title,
-    due_date: urgencyToDueDate(dt.urgency),
-    tag: dt.tag,
-    done: false,
-    source: 'manual' as const,
-  }))
+  const completed = getCompletedIds()
+  return DEMO_TASKS.map((dt, i) => {
+    const id = `demo-task-${i}`
+    return {
+      id,
+      family_id: DEMO_FAMILY_ID,
+      event_id: null,
+      title: dt.title,
+      due_date: urgencyToDueDate(dt.urgency),
+      tag: dt.tag,
+      done: completed.has(id),
+      source: 'manual' as const,
+    }
+  })
 }
 
 export function buildDemoEvents(): FamilyEvent[] {
   const todayStr = fmt(TODAY)
-  // TodaySchedule resolves member names from DEMO_MEMBER_MAP when isDemo,
-  // so member_id doesn't need to point at a real row
   return DEMO_EVENTS.map((de, i) => ({
     id: `demo-event-${i}`,
     family_id: DEMO_FAMILY_ID,
