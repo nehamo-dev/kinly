@@ -22,21 +22,29 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Restore session — mark ready once resolved (with or without a session)
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session)
-      if (session?.user) {
-        await loadFamilyId(session.user.id)
-        if (session.user.is_anonymous) setIsDemo(true)
-      }
-      setReady(true)
-    }).catch(() => setReady(true)) // always unblock even if Supabase is unreachable
+    let done = false
+    const markReady = () => { if (!done) { done = true; setReady(true) } }
 
-    // Listen for auth changes
+    // Hard failsafe — always unblock within 5 s regardless of network
+    const failsafe = setTimeout(markReady, 5000)
+
+    // Restore session
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        setSession(session)
+        if (session?.user) {
+          await loadFamilyId(session.user.id).catch(() => {})
+          if (session.user.is_anonymous) setIsDemo(true)
+        }
+      })
+      .catch(() => {})
+      .finally(() => { clearTimeout(failsafe); markReady() })
+
+    // Listen for subsequent auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       if (session?.user) {
-        await loadFamilyId(session.user.id)
+        await loadFamilyId(session.user.id).catch(() => {})
         if (session.user.is_anonymous) setIsDemo(true)
       } else {
         setFamilyId(null)
@@ -44,7 +52,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => { subscription.unsubscribe(); clearTimeout(failsafe) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadFamilyId(userId: string) {
