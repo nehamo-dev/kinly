@@ -1,26 +1,49 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { supabase } from '../../lib/supabase'
 import { seedDemoFamily } from '../../lib/demo'
 import { useAuthStore } from '../../store/authStore'
-
-type AuthView = 'landing' | 'signup' | 'login'
+import { useNavigate } from 'react-router-dom'
 
 export function Welcome() {
-  const [view, setView] = useState<AuthView>('landing')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [demoLoading, setDemoLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
   const navigate = useNavigate()
   const setFamilyId = useAuthStore((s) => s.setFamilyId)
   const setIsDemo = useAuthStore((s) => s.setIsDemo)
 
-  async function handleDemoMode() {
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault()
     setLoading(true)
+    setError(null)
+    try {
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      })
+      if (otpErr) throw otpErr
+      setSent(true)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleSSO() {
+    const { error: ssoErr } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/` },
+    })
+    if (ssoErr) setError(ssoErr.message)
+  }
+
+  async function handleDemoMode() {
+    setDemoLoading(true)
     setError(null)
     try {
       const { data, error: signInErr } = await supabase.auth.signInAnonymously()
@@ -36,77 +59,59 @@ export function Welcome() {
       console.error('Demo seed error:', JSON.stringify(e, null, 2), msg)
       setError(msg || 'Something went wrong')
     } finally {
-      setLoading(false)
+      setDemoLoading(false)
     }
-  }
-
-  async function handleSignup(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    try {
-      const { error: signUpErr } = await supabase.auth.signUp({ email, password })
-      if (signUpErr) throw signUpErr
-      setMessage('Check your email for a confirmation link.')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Sign-up failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    try {
-      const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
-      if (loginErr) throw loginErr
-      navigate('/')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Login failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleGoogleSSO() {
-    const { error: ssoErr } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
-    })
-    if (ssoErr) setError(ssoErr.message)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+
         {/* Logo + headline */}
-        <div className="text-center mb-8">
-          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" className="mb-4 mx-auto">
-            <circle cx="21" cy="22" r="5" fill="#E8392A" />
-            <circle cx="35" cy="22" r="5" fill="#E8392A" />
-            <path d="M12 34 Q28 50 44 34" stroke="#E8392A" strokeWidth="5" strokeLinecap="round" fill="none" />
-          </svg>
-          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">Kinly</h1>
-          <p className="text-slate-500 mt-2 text-sm">
-            Family logistics, finally organised.
-          </p>
+        <div className="text-center mb-10">
+          <KinlyLogo />
+          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight mt-5">Kinly</h1>
+          <p className="text-slate-500 mt-2 text-sm">Family logistics, finally organised.</p>
         </div>
 
         {/* Card */}
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          {view === 'landing' && (
-            <div className="flex flex-col gap-3">
-              {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-              <Button size="lg" className="w-full" onClick={() => setView('signup')}>
-                Create account
-              </Button>
-              <Button variant="secondary" size="lg" className="w-full" onClick={handleGoogleSSO}>
-                <GoogleIcon />
-                Continue with Google
-              </Button>
-              <div className="relative my-2">
+          {sent ? (
+            <div className="text-center py-2">
+              <div className="text-3xl mb-3">✉️</div>
+              <p className="font-medium text-slate-900">Check your inbox</p>
+              <p className="text-sm text-slate-500 mt-1">
+                We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span>
+              </p>
+              <button
+                className="text-xs text-slate-400 hover:text-slate-600 mt-5 underline"
+                onClick={() => { setSent(false); setEmail('') }}
+              >
+                Use a different email
+              </button>
+            </div>
+          ) : (
+            <>
+              {error && <p className="text-sm text-red-600 text-center mb-3">{error}</p>}
+
+              {/* Magic link form */}
+              <form onSubmit={handleMagicLink} className="flex flex-col gap-3">
+                <Input
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                />
+                <Button type="submit" size="lg" loading={loading} className="w-full">
+                  Send magic link
+                </Button>
+              </form>
+
+              {/* Divider */}
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-100" />
                 </div>
@@ -114,78 +119,44 @@ export function Welcome() {
                   <span className="bg-white px-3 text-xs text-slate-400">or</span>
                 </div>
               </div>
+
+              {/* Google */}
+              <Button variant="secondary" size="lg" className="w-full mb-4" onClick={handleGoogleSSO}>
+                <GoogleIcon />
+                Continue with Google
+              </Button>
+
+              {/* Demo */}
               <Button
                 variant="ghost"
                 size="lg"
-                className="w-full text-slate-600"
+                className="w-full text-slate-500"
                 onClick={handleDemoMode}
-                loading={loading}
+                loading={demoLoading}
               >
                 ✦ Try with demo data
               </Button>
-              <p className="text-xs text-slate-400 text-center mt-1">
+              <p className="text-xs text-slate-400 text-center mt-2">
                 No account required · resets after 24 hours
               </p>
-              <button
-                className="text-xs text-slate-400 hover:text-slate-600 text-center mt-1 underline"
-                onClick={() => setView('login')}
-              >
-                Already have an account? Log in
-              </button>
-            </div>
-          )}
-
-          {(view === 'signup' || view === 'login') && (
-            <form
-              onSubmit={view === 'signup' ? handleSignup : handleLogin}
-              className="flex flex-col gap-4"
-            >
-              <button
-                type="button"
-                className="text-xs text-slate-400 hover:text-slate-600 self-start -mt-1 mb-1"
-                onClick={() => { setView('landing'); setError(null); setMessage(null) }}
-              >
-                ← Back
-              </button>
-              <h2 className="text-lg font-semibold text-slate-900">
-                {view === 'signup' ? 'Create your account' : 'Welcome back'}
-              </h2>
-              <Input
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={view === 'signup' ? 'new-password' : 'current-password'}
-                helper={view === 'signup' ? 'At least 8 characters' : undefined}
-              />
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {message && <p className="text-sm text-[#E8392A]">{message}</p>}
-              <Button type="submit" size="lg" loading={loading} className="w-full mt-1">
-                {view === 'signup' ? 'Create account' : 'Log in'}
-              </Button>
-              {view === 'signup' && (
-                <button
-                  type="button"
-                  className="text-xs text-slate-400 hover:text-slate-600 text-center underline"
-                  onClick={() => setView('login')}
-                >
-                  Already have an account? Log in
-                </button>
-              )}
-            </form>
+            </>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+function KinlyLogo() {
+  return (
+    <svg width="60" height="54" viewBox="0 0 60 54" fill="none" className="mx-auto">
+      {/* three dots: top-centre, lower-left, lower-right */}
+      <circle cx="30" cy="10" r="6" fill="#E8392A" />
+      <circle cx="14" cy="26" r="6" fill="#E8392A" />
+      <circle cx="46" cy="26" r="6" fill="#E8392A" />
+      {/* smile */}
+      <path d="M8 38 Q30 56 52 38" stroke="#E8392A" strokeWidth="5.5" strokeLinecap="round" fill="none" />
+    </svg>
   )
 }
 
