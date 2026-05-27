@@ -138,8 +138,13 @@ export const DEMO_EVENTS: DemoEvent[] = [
 ]
 
 // ─── Seed function ────────────────────────────────────────────────────────────
+// Parallelised: 4 sequential batches instead of 11 sequential calls.
+// Batch 1: create family
+// Batch 2 (parallel): link user + insert members + insert providers
+// Batch 3 (parallel): activities, occasions, home services, events, tasks, trusted domains, shopping list
+// Batch 4: shopping items (needs list id from batch 3)
 export async function seedDemoFamily(userId: string): Promise<string> {
-  // 1. Create family (RLS disabled on families table — low risk, scoped via user_families)
+  // ── Batch 1: family ─────────────────────────────────────────────────────────
   const { data: family, error: famErr } = await supabase
     .from('families')
     .insert({ name: 'The Martins', is_demo: true })
@@ -149,14 +154,7 @@ export async function seedDemoFamily(userId: string): Promise<string> {
   if (famErr || !family) throw famErr || new Error('Failed to create family')
   const familyId: string = family.id
 
-  // 2. Link the user to the family
-  const { error: ufErr } = await supabase
-    .from('user_families')
-    .insert({ user_id: userId, family_id: familyId, role: 'manager' })
-
-  if (ufErr) throw ufErr
-
-  // 3. Members
+  // ── Batch 2 (parallel): link user + members + providers ─────────────────────
   const memberRows: Omit<Member, 'id'>[] = [
     { family_id: familyId, name: 'Sarah Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#E8392A' },
     { family_id: familyId, name: 'James Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#3B82F6' },
@@ -171,12 +169,36 @@ export async function seedDemoFamily(userId: string): Promise<string> {
       avatar_color: '#F59E0B'
     },
   ]
-  const { data: members } = await supabase.from('members').insert(memberRows).select()
-  if (!members) throw new Error('Failed to create members')
+
+  const providerRows: Omit<Provider, 'id'>[] = [
+    { family_id: familyId, name: "Maria's Cleaning Co.", type: 'cleaner', rating: 5, phone: null, email: null, notes: null },
+    { family_id: familyId, name: 'Jess Nguyen', type: 'babysitter', rating: 5, phone: null, email: null, notes: null },
+    { family_id: familyId, name: 'Ms. Chen', type: 'tutor', rating: 4, phone: null, email: null, notes: null },
+  ]
+
+  const [, membersResult, providersResult] = await Promise.all([
+    // link user
+    supabase.from('user_families').insert({ user_id: userId, family_id: familyId, role: 'manager' }),
+    // members
+    supabase.from('members').insert(memberRows).select(),
+    // providers
+    supabase.from('providers').insert(providerRows).select(),
+  ])
+
+  const members = membersResult.data
+  const provs = providersResult.data
+  if (!members) throw membersResult.error || new Error('Failed to create members')
+  if (!provs) throw providersResult.error || new Error('Failed to create providers')
 
   const [, , lila, noah] = members
+  const [mariasCo] = provs
 
-  // 4. Activities
+  // ── Batch 3 (parallel): everything that depends on member/provider ids ───────
+  const todayStr = fmt(TODAY)
+  const tomStr = fmt(addDays(TODAY, 1))
+  const thuStr = fmt(addDays(TODAY, (4 - TODAY.getDay() + 7) % 7 || 7))
+  const fridayStr = fmt(addDays(TODAY, (5 - TODAY.getDay() + 7) % 7 || 7))
+
   const activities: Omit<Activity, 'id'>[] = [
     {
       family_id: familyId, member_id: lila.id,
@@ -197,9 +219,7 @@ export async function seedDemoFamily(userId: string): Promise<string> {
       location: 'Bellevue Aquatic Center', provider_name: null, status: 'active'
     },
   ]
-  await supabase.from('activities').insert(activities)
 
-  // 5. Occasions
   const occasions: Omit<Occasion, 'id'>[] = [
     {
       family_id: familyId, member_id: lila.id,
@@ -220,19 +240,7 @@ export async function seedDemoFamily(userId: string): Promise<string> {
       remind_30: true, remind_7: true, remind_1: true
     },
   ]
-  await supabase.from('occasions').insert(occasions)
 
-  // 6. Providers
-  const providers: Omit<Provider, 'id'>[] = [
-    { family_id: familyId, name: "Maria's Cleaning Co.", type: 'cleaner', rating: 5, phone: null, email: null, notes: null },
-    { family_id: familyId, name: 'Jess Nguyen', type: 'babysitter', rating: 5, phone: null, email: null, notes: null },
-    { family_id: familyId, name: 'Ms. Chen', type: 'tutor', rating: 4, phone: null, email: null, notes: null },
-  ]
-  const { data: provs } = await supabase.from('providers').insert(providers).select()
-  if (!provs) throw new Error('Failed to create providers')
-  const [mariasCo] = provs
-
-  // 7. Home services
   const services: Omit<HomeService, 'id'>[] = [
     {
       family_id: familyId, provider_id: mariasCo.id,
@@ -246,12 +254,6 @@ export async function seedDemoFamily(userId: string): Promise<string> {
       last_done: null, next_due: fmt(addDays(TODAY, 14)),
     },
   ]
-  await supabase.from('home_services').insert(services)
-
-  // 8. Events (today)
-  const todayStr = fmt(TODAY)
-  const tomStr = fmt(addDays(TODAY, 1))
-  const thuStr = fmt(addDays(TODAY, (4 - TODAY.getDay() + 7) % 7 || 7))
 
   const events: Omit<FamilyEvent, 'id'>[] = [
     {
@@ -280,10 +282,6 @@ export async function seedDemoFamily(userId: string): Promise<string> {
       source: 'manual', calendar_event_id: null, gmail_message_id: null
     },
   ]
-  await supabase.from('events').insert(events)
-
-  // 9. Tasks
-  const fridayStr = fmt(addDays(TODAY, (5 - TODAY.getDay() + 7) % 7 || 7))
 
   const tasks: Omit<Task, 'id'>[] = [
     {
@@ -312,22 +310,24 @@ export async function seedDemoFamily(userId: string): Promise<string> {
       due_date: fmt(addDays(TODAY, 14)), tag: 'home', done: false, source: 'manual'
     },
   ]
-  await supabase.from('tasks').insert(tasks)
 
-  // 10. Trusted domains
   const domains: Omit<TrustedDomain, 'id'>[] = [
     { family_id: familyId, domain: 'cedarcrestacademy.org', linked_member_id: lila.id },
     { family_id: familyId, domain: 'seahawkssoccer.org', linked_member_id: lila.id },
   ]
-  await supabase.from('trusted_domains').insert(domains)
 
-  // 11. Shopping list
-  const { data: list } = await supabase
-    .from('shopping_lists')
-    .insert({ family_id: familyId, name: 'Weekly groceries' })
-    .select()
-    .single()
+  const [shoppingListResult] = await Promise.all([
+    supabase.from('shopping_lists').insert({ family_id: familyId, name: 'Weekly groceries' }).select().single(),
+    supabase.from('activities').insert(activities),
+    supabase.from('occasions').insert(occasions),
+    supabase.from('home_services').insert(services),
+    supabase.from('events').insert(events),
+    supabase.from('tasks').insert(tasks),
+    supabase.from('trusted_domains').insert(domains),
+  ])
 
+  // ── Batch 4: shopping items (needs list id) ──────────────────────────────────
+  const list = shoppingListResult.data
   if (list) {
     await supabase.from('shopping_items').insert([
       { list_id: list.id, name: 'Milk', quantity: '2 gallons', checked: true },

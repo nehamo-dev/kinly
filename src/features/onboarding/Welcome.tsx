@@ -46,12 +46,22 @@ export function Welcome() {
     setDemoLoading(true)
     setError(null)
     try {
-      const { data, error: signInErr } = await supabase.auth.signInAnonymously()
-      if (signInErr || !data.user) throw signInErr || new Error('Sign-in failed')
-      const familyId = await seedDemoFamily(data.user.id)
-      setFamilyId(familyId)
-      setIsDemo(true)
-      navigate('/')
+      // Hard 20-second ceiling — prevents the button spinning forever if
+      // Supabase is slow to respond on a cold Vercel edge
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Demo setup timed out — please try again')), 20_000)
+      )
+
+      const run = async () => {
+        const { data, error: signInErr } = await supabase.auth.signInAnonymously()
+        if (signInErr || !data.user) throw signInErr || new Error('Sign-in failed')
+        const familyId = await seedDemoFamily(data.user.id)
+        setFamilyId(familyId)
+        setIsDemo(true)
+        navigate('/')
+      }
+
+      await Promise.race([run(), timeout])
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message
         : (e as { message?: string })?.message
