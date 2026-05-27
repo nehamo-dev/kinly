@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -19,25 +19,25 @@ const queryClient = new QueryClient()
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession, setFamilyId, setIsDemo } = useAuthStore()
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Restore session
+    // Restore session — mark ready once resolved (with or without a session)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       if (session?.user) {
         await loadFamilyId(session.user.id)
+        if (session.user.is_anonymous) setIsDemo(true)
       }
-    })
+      setReady(true)
+    }).catch(() => setReady(true)) // always unblock even if Supabase is unreachable
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       if (session?.user) {
         await loadFamilyId(session.user.id)
-        // Anonymous users = demo mode
-        if (session.user.is_anonymous) {
-          setIsDemo(true)
-        }
+        if (session.user.is_anonymous) setIsDemo(true)
       } else {
         setFamilyId(null)
         setIsDemo(false)
@@ -56,6 +56,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       .single()
     if (data?.family_id) setFamilyId(data.family_id)
   }
+
+  if (!ready) return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-[#E8392A] border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 
   return <>{children}</>
 }
