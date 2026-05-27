@@ -35,13 +35,15 @@ Run every item before pushing. Add new cases whenever a bug is reported or a fea
 
 ### 3. Demo mode — seed flow
 
-- [ ] Clicking "✦ Try with demo data" shows a loading spinner on the button
-- [ ] After ~2–4 seconds (parallel seeding), redirects to the home feed (no error message shown)
-- [ ] If seed takes > 20 s, shows "Demo setup timed out — please try again" error (not infinite spin)
+- [ ] Clicking "✦ Try with demo data" navigates to home feed instantly (< 500 ms) — no spinner, no network
+- [ ] Home feed renders immediately with all demo data: 5 tasks, 5 events, 4 emails
 - [ ] Demo banner appears at the top: "You're in demo mode. Your data resets after 24 hours."
+- [ ] Hard-refresh (⌘R) stays on home feed — demo state persists in localStorage ('kinly-demo' key)
+- [ ] Clicking "Sign up to save your data →" in the demo banner clears localStorage and goes to /welcome
 - [ ] TopNav shows the smiley logo + "Kinly" wordmark in tomato red
 - [ ] "Today" nav item shows active pill state (bg-slate-100)
 - [ ] User avatar visible in top-right corner
+- [ ] Checking off a task in demo mode toggles it locally (no network call; resets on reload)
 
 ---
 
