@@ -25,7 +25,7 @@ const tagCircleColor: Record<string, string> = {
 
 const urgencyColors = {
   red:   'text-red-500',
-  green: 'text-[#1D9E75]',
+  green: 'text-[#E8392A]',
   slate: 'text-slate-400',
 }
 
@@ -40,7 +40,7 @@ export function TaskRow({
       <button
         onClick={onToggle}
         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 transition-colors
-          ${done ? 'bg-[#1D9E75] border-[#1D9E75]' : `${circleColor} hover:border-[#1D9E75]`}`}
+          ${done ? 'bg-[#E8392A] border-[#E8392A]' : `${circleColor} hover:border-[#E8392A]`}`}
         aria-label={done ? 'Mark as not done' : 'Mark as done'}
       >
         {done && (

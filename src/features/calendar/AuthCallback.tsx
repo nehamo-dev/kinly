@@ -54,7 +54,7 @@ export function AuthCallback() {
         <div className="text-center">
           <p className="text-red-600 text-sm mb-3">{error}</p>
           <button
-            className="text-sm text-[#1D9E75] hover:underline"
+            className="text-sm text-[#E8392A] hover:underline"
             onClick={() => navigate('/')}
           >
             Go home
@@ -67,7 +67,7 @@ export function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <div className="w-8 h-8 border-2 border-[#E8392A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
         <p className="text-sm text-slate-500">Connecting your calendar…</p>
       </div>
     </div>

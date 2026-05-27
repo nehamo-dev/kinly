@@ -158,7 +158,7 @@ export async function seedDemoFamily(userId: string): Promise<string> {
 
   // 3. Members
   const memberRows: Omit<Member, 'id'>[] = [
-    { family_id: familyId, name: 'Sarah Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#1D9E75' },
+    { family_id: familyId, name: 'Sarah Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#E8392A' },
     { family_id: familyId, name: 'James Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#3B82F6' },
     {
       family_id: familyId, name: 'Lila Martin', role: 'child',

@@ -79,15 +79,15 @@ export function Welcome() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo + headline */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1D9E75] mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M7 17V7l4 5 4-5v10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" className="mb-4 mx-auto">
+            <circle cx="21" cy="22" r="5" fill="#E8392A" />
+            <circle cx="35" cy="22" r="5" fill="#E8392A" />
+            <path d="M12 34 Q28 50 44 34" stroke="#E8392A" strokeWidth="5" strokeLinecap="round" fill="none" />
+          </svg>
           <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">Kinly</h1>
           <p className="text-slate-500 mt-2 text-sm">
             Family logistics, finally organised.
@@ -168,7 +168,7 @@ export function Welcome() {
                 helper={view === 'signup' ? 'At least 8 characters' : undefined}
               />
               {error && <p className="text-sm text-red-600">{error}</p>}
-              {message && <p className="text-sm text-[#1D9E75]">{message}</p>}
+              {message && <p className="text-sm text-[#E8392A]">{message}</p>}
               <Button type="submit" size="lg" loading={loading} className="w-full mt-1">
                 {view === 'signup' ? 'Create account' : 'Log in'}
               </Button>

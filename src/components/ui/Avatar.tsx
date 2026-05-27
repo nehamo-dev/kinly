@@ -21,7 +21,7 @@ function initials(name: string) {
 }
 
 export function Avatar({ name, color, size = 'md', className = '' }: AvatarProps) {
-  const bg = color || '#1D9E75'
+  const bg = color || '#E8392A'
   return (
     <div
       className={`

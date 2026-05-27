@@ -11,7 +11,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   home: 'bg-amber-100 text-amber-700',
   occasion: 'bg-purple-100 text-purple-700',
   urgent: 'bg-red-100 text-red-700',
-  gmail: 'bg-emerald-100 text-emerald-700',
+  gmail: 'bg-orange-100 text-orange-700',
   daily: 'bg-slate-100 text-slate-600',
   default: 'bg-slate-100 text-slate-600',
 }

@@ -30,7 +30,7 @@ type Step2 = z.infer<typeof step2Schema>
 type Step3 = z.infer<typeof step3Schema>
 type Step5 = z.infer<typeof step5Schema>
 
-const AVATAR_COLORS = ['#1D9E75', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899']
+const AVATAR_COLORS = ['#E8392A', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899']
 const totalSteps = 5
 
 export function Onboarding() {
@@ -156,7 +156,7 @@ export function Onboarding() {
   const progress = Math.round((step / totalSteps) * 100)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Progress */}
         <div className="mb-6">
@@ -166,7 +166,7 @@ export function Onboarding() {
           </div>
           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#1D9E75] rounded-full transition-all duration-300"
+              className="h-full bg-[#E8392A] rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -249,7 +249,7 @@ export function Onboarding() {
 
               <button
                 type="button"
-                className="text-sm text-[#1D9E75] hover:text-[#178a64] font-medium"
+                className="text-sm text-[#E8392A] hover:text-[#c73520] font-medium"
                 onClick={() => append({ name: '', school: '', grade: '', dob: '' })}
               >
                 + Add another child
@@ -275,7 +275,7 @@ export function Onboarding() {
               <div className="flex flex-col gap-3 py-2">
                 {['See events across all family members', 'Auto-detect school pickups & activities', 'Stay in sync — no manual entry'].map((feat) => (
                   <div key={feat} className="flex items-center gap-2 text-sm text-slate-600">
-                    <span className="text-[#1D9E75]">✓</span> {feat}
+                    <span className="text-[#E8392A]">✓</span> {feat}
                   </div>
                 ))}
               </div>
@@ -317,7 +317,7 @@ export function Onboarding() {
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-1 block">Frequency</label>
                 <select
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#E8392A]"
                   {...step5.register('frequency')}
                 >
                   <option value="weekly">Weekly</option>

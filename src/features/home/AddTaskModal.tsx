@@ -77,7 +77,7 @@ export function AddTaskModal({ open, onClose, familyId, onSaved }: AddTaskModalP
         <div>
           <label className="text-sm font-medium text-slate-700 mb-1 block">Tag (optional)</label>
           <select
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#E8392A]"
             {...register('tag')}
           >
             <option value="">No tag</option>
