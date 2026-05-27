@@ -15,6 +15,8 @@ interface NeedsAttentionProps {
   isLoading?: boolean
   isDemo?: boolean
   onRefresh: () => void
+  /** Local-only toggle used in demo mode instead of a Supabase write */
+  onDemoToggle?: (taskId: string) => void
 }
 
 function urgencyFor(task: Task): { label: string; color: 'red' | 'green' | 'slate' } {
@@ -67,7 +69,7 @@ function TaskSkeleton() {
   )
 }
 
-export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh }: NeedsAttentionProps) {
+export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh, onDemoToggle }: NeedsAttentionProps) {
   const [expanded, setExpanded] = useState(false)
 
   const pending = tasks.filter((t) => !t.done)
@@ -76,6 +78,11 @@ export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh }: NeedsAtt
   const hiddenCount = sorted.length - COLLAPSED_COUNT
 
   async function toggleTask(task: Task) {
+    if (onDemoToggle) {
+      // Demo mode: update local state only, no Supabase
+      onDemoToggle(task.id)
+      return
+    }
     await supabase.from('tasks').update({ done: !task.done }).eq('id', task.id)
     onRefresh()
   }

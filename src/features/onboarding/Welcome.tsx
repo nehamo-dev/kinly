@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { supabase } from '../../lib/supabase'
-import { seedDemoFamily } from '../../lib/demo'
 import { useAuthStore } from '../../store/authStore'
 import { useNavigate } from 'react-router-dom'
+import { saveDemoState, DEMO_FAMILY_ID } from '../../lib/demoLocal'
 
 export function Welcome() {
   const [email, setEmail] = useState('')
@@ -42,35 +42,16 @@ export function Welcome() {
     if (ssoErr) setError(ssoErr.message)
   }
 
-  async function handleDemoMode() {
+  function handleDemoMode() {
+    // Pure local demo — no Supabase, no network, instant.
+    // Data is synthesised from constants in demoLocal.ts and persisted
+    // in localStorage so hard-refresh stays in demo mode.
     setDemoLoading(true)
-    setError(null)
-    try {
-      // Hard 20-second ceiling — prevents the button spinning forever if
-      // Supabase is slow to respond on a cold Vercel edge
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Demo setup timed out — please try again')), 20_000)
-      )
-
-      const run = async () => {
-        const { data, error: signInErr } = await supabase.auth.signInAnonymously()
-        if (signInErr || !data.user) throw signInErr || new Error('Sign-in failed')
-        const familyId = await seedDemoFamily(data.user.id)
-        setFamilyId(familyId)
-        setIsDemo(true)
-        navigate('/')
-      }
-
-      await Promise.race([run(), timeout])
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message
-        : (e as { message?: string })?.message
-        ?? JSON.stringify(e)
-      console.error('Demo seed error:', JSON.stringify(e, null, 2), msg)
-      setError(msg || 'Something went wrong')
-    } finally {
-      setDemoLoading(false)
-    }
+    saveDemoState()
+    setFamilyId(DEMO_FAMILY_ID)
+    setIsDemo(true)
+    navigate('/')
+    // (setDemoLoading(false) intentionally omitted — component unmounts on navigate)
   }
 
   return (

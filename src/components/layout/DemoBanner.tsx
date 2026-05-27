@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { clearDemoState } from '../../lib/demoLocal'
 
 export function DemoBanner() {
   const isDemo = useAuthStore((s) => s.isDemo)
@@ -17,7 +18,7 @@ export function DemoBanner() {
           Your data resets after 24 hours.{' '}
           <button
             className="underline font-medium hover:text-amber-900"
-            onClick={() => navigate('/welcome')}
+            onClick={() => { clearDemoState(); navigate('/welcome') }}
           >
             Sign up to save your data →
           </button>

@@ -8,6 +8,7 @@ import { FlaggedEmails } from './FlaggedEmails'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { syncCalendarEvents } from '../../lib/google'
+import { buildDemoTasks, buildDemoEvents } from '../../lib/demoLocal'
 import type { Task, FamilyEvent, Member } from '../../types'
 
 export function Home() {
@@ -29,7 +30,18 @@ export function Home() {
   const loadData = useCallback(() => {
     if (!familyId) return
 
-    // ── Tasks: fires alone → NeedsAttention renders as soon as this resolves ──
+    // ── Demo mode: use static constants, zero network calls ─────────────────
+    if (isDemo) {
+      setTasks(buildDemoTasks())
+      setEvents(buildDemoEvents())
+      setMembers([])
+      setTasksLoading(false)
+      setScheduleLoading(false)
+      return
+    }
+
+    // ── Real mode: progressive Supabase queries ──────────────────────────────
+    // Tasks fire alone → NeedsAttention renders as soon as this resolves
     setTasksLoading(true)
     void (async () => {
       try {
@@ -44,7 +56,7 @@ export function Home() {
       }
     })()
 
-    // ── Events + Members: both needed before TodaySchedule can show member names ──
+    // Events + Members fire together — both needed for TodaySchedule member names
     setScheduleLoading(true)
     void (async () => {
       try {
@@ -58,15 +70,22 @@ export function Home() {
         setScheduleLoading(false)
       }
     })()
-  }, [familyId, today])
+  }, [familyId, isDemo, today])
 
   useEffect(() => { loadData() }, [loadData])
 
-  // Background calendar sync
+  // Background calendar sync (real accounts only)
   useEffect(() => {
     if (!familyId || !user || isDemo) return
     syncCalendarEvents(familyId, user.id, members).then(loadData).catch(() => {})
   }, [familyId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Local-only task toggle for demo mode (no Supabase write needed)
+  const handleDemoToggle = useCallback((taskId: string) => {
+    setTasks((prev) =>
+      prev.map((t) => t.id === taskId ? { ...t, done: !t.done } : t)
+    )
+  }, [])
 
   const pendingCount = tasks.filter((t) => !t.done).length
   const bothLoaded = !tasksLoading && !scheduleLoading
@@ -92,7 +111,13 @@ export function Home() {
       <CommandBar familyId={familyId} onRefresh={loadData} />
 
       {/* Each section renders independently as its data arrives */}
-      <NeedsAttention tasks={tasks} isLoading={tasksLoading} isDemo={isDemo} onRefresh={loadData} />
+      <NeedsAttention
+        tasks={tasks}
+        isLoading={tasksLoading}
+        isDemo={isDemo}
+        onRefresh={loadData}
+        onDemoToggle={isDemo ? handleDemoToggle : undefined}
+      />
       <TodaySchedule events={events} members={members} isLoading={scheduleLoading} isDemo={isDemo} />
 
       {/* FlaggedEmails uses static DEMO_EMAILS — no loading state needed */}
