@@ -34,7 +34,18 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session)
         if (session?.user) {
           await loadFamilyId(session.user.id).catch(() => {})
-          if (session.user.is_anonymous) setIsDemo(true)
+          if (session.user.is_anonymous) {
+            const store = useAuthStore.getState()
+            if (!store.familyId) {
+              // Stale anonymous session with no family — clear and send to Welcome
+              setSession(null)
+              setFamilyId(null)
+              supabase.auth.signOut().catch(() => {})
+              window.location.replace('/welcome')
+              return
+            }
+            setIsDemo(true)
+          }
         }
       })
       .catch(() => {})
@@ -79,6 +90,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const familyId = useAuthStore((s) => s.familyId)
 
   if (session === null) return <Navigate to="/welcome" replace />
+  // Anonymous users with no family → Welcome to start fresh
+  if (session && !familyId && session.user?.is_anonymous) return <Navigate to="/welcome" replace />
+  // Real users with no family → Onboarding
   if (session && !familyId) return <Navigate to="/onboarding" replace />
   return <>{children}</>
 }
