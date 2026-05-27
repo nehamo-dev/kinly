@@ -9,9 +9,9 @@ export function SectionHeader({ label, count, action }: SectionHeaderProps) {
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
         <span className="text-[#E8392A] text-sm leading-none" aria-hidden>●</span>
-        <span className="text-xs font-semibold tracking-widest uppercase text-slate-600">
+        <span className="text-xs font-semibold tracking-widest uppercase text-[#E8392A]">
           {label}
-          {count !== undefined && <span className="ml-1.5 text-slate-400">{count}</span>}
+          {count !== undefined && <span className="ml-1.5">{count}</span>}
         </span>
       </div>
       {action && (

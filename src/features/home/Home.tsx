@@ -95,7 +95,7 @@ export function Home() {
     <PageWrapper>
       {/* Page header — renders immediately */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">{todayLabel}</h1>
+        <h1 className="text-2xl font-semibold text-[#E8392A] tracking-tight">{todayLabel}</h1>
         {bothLoaded ? (
           <p className="text-sm text-slate-500 mt-1">
             {pendingCount > 0 && (
