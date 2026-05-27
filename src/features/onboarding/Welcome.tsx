@@ -30,7 +30,11 @@ export function Welcome() {
       setIsDemo(true)
       navigate('/')
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      const msg = e instanceof Error ? e.message
+        : (e as { message?: string })?.message
+        ?? JSON.stringify(e)
+      console.error('Demo seed error:', JSON.stringify(e, null, 2), msg)
+      setError(msg || 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -94,6 +98,7 @@ export function Welcome() {
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
           {view === 'landing' && (
             <div className="flex flex-col gap-3">
+              {error && <p className="text-sm text-red-600 text-center">{error}</p>}
               <Button size="lg" className="w-full" onClick={() => setView('signup')}>
                 Create account
               </Button>

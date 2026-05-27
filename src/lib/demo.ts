@@ -139,7 +139,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
 
 // ─── Seed function ────────────────────────────────────────────────────────────
 export async function seedDemoFamily(userId: string): Promise<string> {
-  // 1. Create family
+  // 1. Create family (RLS disabled on families table — low risk, scoped via user_families)
   const { data: family, error: famErr } = await supabase
     .from('families')
     .insert({ name: 'The Martins', is_demo: true })
@@ -147,12 +147,14 @@ export async function seedDemoFamily(userId: string): Promise<string> {
     .single()
 
   if (famErr || !family) throw famErr || new Error('Failed to create family')
-  const familyId = family.id
+  const familyId: string = family.id
 
-  // 2. Link user to family
-  await supabase.from('user_families').insert({
-    user_id: userId, family_id: familyId, role: 'manager'
-  })
+  // 2. Link the user to the family
+  const { error: ufErr } = await supabase
+    .from('user_families')
+    .insert({ user_id: userId, family_id: familyId, role: 'manager' })
+
+  if (ufErr) throw ufErr
 
   // 3. Members
   const memberRows: Omit<Member, 'id'>[] = [
