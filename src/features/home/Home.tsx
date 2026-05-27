@@ -14,29 +14,50 @@ export function Home() {
   const familyId = useAuthStore((s) => s.familyId)
   const user = useAuthStore((s) => s.user)
   const isDemo = useAuthStore((s) => s.isDemo)
+
   const [tasks, setTasks] = useState<Task[]>([])
   const [events, setEvents] = useState<FamilyEvent[]>([])
   const [members, setMembers] = useState<Member[]>([])
-  const [loading, setLoading] = useState(true)
+
+  // Independent loading states — each section renders as soon as its data arrives
+  const [tasksLoading, setTasksLoading] = useState(true)
+  const [scheduleLoading, setScheduleLoading] = useState(true)
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const todayLabel = format(new Date(), 'EEEE, MMMM d')
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(() => {
     if (!familyId) return
-    setLoading(true)
-    try {
-      const [tasksRes, eventsRes, membersRes] = await Promise.all([
-        supabase.from('tasks').select('*').eq('family_id', familyId).eq('done', false),
-        supabase.from('events').select('*').eq('family_id', familyId).eq('date', today),
-        supabase.from('members').select('*').eq('family_id', familyId),
-      ])
-      setTasks((tasksRes.data as Task[]) || [])
-      setEvents((eventsRes.data as FamilyEvent[]) || [])
-      setMembers((membersRes.data as Member[]) || [])
-    } finally {
-      setLoading(false)
-    }
+
+    // ── Tasks: fires alone → NeedsAttention renders as soon as this resolves ──
+    setTasksLoading(true)
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('family_id', familyId)
+          .eq('done', false)
+        setTasks((data as Task[]) || [])
+      } finally {
+        setTasksLoading(false)
+      }
+    })()
+
+    // ── Events + Members: both needed before TodaySchedule can show member names ──
+    setScheduleLoading(true)
+    void (async () => {
+      try {
+        const [eventsRes, membersRes] = await Promise.all([
+          supabase.from('events').select('*').eq('family_id', familyId).eq('date', today),
+          supabase.from('members').select('*').eq('family_id', familyId),
+        ])
+        setEvents((eventsRes.data as FamilyEvent[]) || [])
+        setMembers((membersRes.data as Member[]) || [])
+      } finally {
+        setScheduleLoading(false)
+      }
+    })()
   }, [familyId, today])
 
   useEffect(() => { loadData() }, [loadData])
@@ -48,45 +69,34 @@ export function Home() {
   }, [familyId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pendingCount = tasks.filter((t) => !t.done).length
-  const flaggedCount = 4 // demo emails
+  const bothLoaded = !tasksLoading && !scheduleLoading
 
   return (
     <PageWrapper>
-      {/* Page header */}
+      {/* Page header — renders immediately */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">{todayLabel}</h1>
-        {!loading && (
+        {bothLoaded ? (
           <p className="text-sm text-slate-500 mt-1">
             {pendingCount > 0 && (
               <><strong className="text-slate-700 font-semibold">{pendingCount} items</strong> need your attention · </>
             )}
-            <strong className="text-slate-700 font-semibold">{events.length} events</strong> on the calendar · {flaggedCount} flagged emails
+            <strong className="text-slate-700 font-semibold">{events.length} events</strong> on the calendar · 4 flagged emails
           </p>
+        ) : (
+          <div className="h-4 mt-1 w-64 rounded bg-slate-100 animate-pulse" />
         )}
       </div>
 
-      {/* AI command bar */}
+      {/* Command bar — always visible immediately */}
       <CommandBar familyId={familyId} onRefresh={loadData} />
 
-      {/* Sections */}
-      {loading ? (
-        <div className="space-y-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="border border-slate-200 rounded-xl p-4 animate-pulse">
-              <div className="h-3 bg-slate-100 rounded w-1/4 mb-4" />
-              {[1, 2, 3].map((j) => (
-                <div key={j} className="h-10 bg-slate-50 rounded mb-2" />
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <NeedsAttention tasks={tasks} isDemo={isDemo} onRefresh={loadData} />
-          <TodaySchedule events={events} members={members} isDemo={isDemo} />
-          <FlaggedEmails />
-        </>
-      )}
+      {/* Each section renders independently as its data arrives */}
+      <NeedsAttention tasks={tasks} isLoading={tasksLoading} isDemo={isDemo} onRefresh={loadData} />
+      <TodaySchedule events={events} members={members} isLoading={scheduleLoading} isDemo={isDemo} />
+
+      {/* FlaggedEmails uses static DEMO_EMAILS — no loading state needed */}
+      <FlaggedEmails />
     </PageWrapper>
   )
 }

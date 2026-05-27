@@ -8,9 +8,11 @@ import { DEMO_TASKS } from '../../lib/demo'
 import type { Task } from '../../types'
 
 const COLLAPSED_COUNT = 3
+const SKELETON_COUNT = 3
 
 interface NeedsAttentionProps {
   tasks: Task[]
+  isLoading?: boolean
   isDemo?: boolean
   onRefresh: () => void
 }
@@ -46,7 +48,26 @@ const DEMO_MEMBER_MAP: Record<string, string> = {
 const DEMO_SUBLINE_MAP: Record<string, string> = {}
 DEMO_TASKS.forEach((t) => { DEMO_SUBLINE_MAP[t.title] = t.subline })
 
-export function NeedsAttention({ tasks, isDemo, onRefresh }: NeedsAttentionProps) {
+function TaskSkeleton() {
+  return (
+    <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0 animate-pulse">
+      {/* Ring placeholder */}
+      <div className="mt-0.5 w-5 h-5 rounded-full border-2 border-slate-200 flex-shrink-0" />
+      {/* Text lines */}
+      <div className="flex-1 space-y-1.5 min-w-0">
+        <div className="flex items-center gap-2">
+          <div className="h-3.5 bg-slate-100 rounded w-2/5" />
+          <div className="h-4 bg-slate-100 rounded-full w-10" />
+        </div>
+        <div className="h-3 bg-slate-100 rounded w-4/5" />
+      </div>
+      {/* Urgency placeholder */}
+      <div className="h-3 bg-slate-100 rounded w-12 mt-0.5 flex-shrink-0" />
+    </div>
+  )
+}
+
+export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh }: NeedsAttentionProps) {
   const [expanded, setExpanded] = useState(false)
 
   const pending = tasks.filter((t) => !t.done)
@@ -63,12 +84,14 @@ export function NeedsAttention({ tasks, isDemo, onRefresh }: NeedsAttentionProps
     <section className="mb-8">
       <SectionHeader
         label="Needs Attention"
-        count={pending.length}
+        count={isLoading ? undefined : pending.length}
         action={{ label: 'Snooze all', onClick: () => {} }}
       />
       <Card padding="none">
         <div className="px-4">
-          {sorted.length === 0 ? (
+          {isLoading ? (
+            Array.from({ length: SKELETON_COUNT }).map((_, i) => <TaskSkeleton key={i} />)
+          ) : sorted.length === 0 ? (
             <p className="text-sm text-slate-400 py-6 text-center">All caught up ✓</p>
           ) : (
             <>
