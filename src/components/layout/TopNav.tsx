@@ -52,10 +52,11 @@ export function TopNav() {
 
 function KinlyLogo() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="flex-shrink-0">
-      <circle cx="10.5" cy="11" r="2.5" fill="#E8392A" />
-      <circle cx="17.5" cy="11" r="2.5" fill="#E8392A" />
-      <path d="M6 17 Q14 25 22 17" stroke="#E8392A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+    <svg width="26" height="24" viewBox="0 0 60 54" fill="none" className="flex-shrink-0">
+      <circle cx="30" cy="10" r="6" fill="#E8392A" />
+      <circle cx="14" cy="26" r="6" fill="#E8392A" />
+      <circle cx="46" cy="26" r="6" fill="#E8392A" />
+      <path d="M8 38 Q30 56 52 38" stroke="#E8392A" strokeWidth="5.5" strokeLinecap="round" fill="none" />
     </svg>
   )
 }

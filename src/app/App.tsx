@@ -51,7 +51,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {})
       .finally(() => { clearTimeout(failsafe); markReady() })
 
-    // Listen for subsequent auth changes
+    // Listen for subsequent auth changes (sign-in, sign-out, token refresh)
+    // Do NOT do stale-session cleanup here — this fires during demo seed before
+    // the family has been created, which would incorrectly boot the user out.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       if (session?.user) {
