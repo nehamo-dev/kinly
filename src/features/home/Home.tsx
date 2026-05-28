@@ -101,13 +101,11 @@ export function Home() {
     setTasksLoading(true)
     void (async () => {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('tasks')
           .select('*')
           .eq('family_id', familyId)
           .eq('done', false)
-        if (error) console.error('[Kinly] tasks error:', error)
-        console.log('[Kinly] tasks:', data?.length ?? 0, 'rows', { familyId })
         setTasks((data as Task[]) || [])
       } finally {
         setTasksLoading(false)
@@ -136,10 +134,6 @@ export function Home() {
             .eq('family_id', familyId),
           occasionsQuery,
         ])
-        if (eventsRes.error)   console.error('[Kinly] events error:',   eventsRes.error)
-        if (membersRes.error)  console.error('[Kinly] members error:',  membersRes.error)
-        if (occasionsRes.error) console.error('[Kinly] occasions error:', occasionsRes.error)
-        console.log('[Kinly] events:', eventsRes.data?.length ?? 0, 'members:', membersRes.data?.length ?? 0, 'occasions:', occasionsRes.data?.length ?? 0)
         setEvents((eventsRes.data     as FamilyEvent[]) || [])
         setMembers((membersRes.data   as Member[])      || [])
         setOccasions((occasionsRes.data as Occasion[])  || [])
@@ -160,8 +154,11 @@ export function Home() {
   const pending   = tasks.filter((t) => !t.done)
   const taskCount = pending.length
 
-  const [activeQuery,        setActiveQuery]        = useState<string | null>(null)
-  const [selectedChipEventId, setSelectedChipEventId] = useState<string | null>(null)
+  const [activeQuery,          setActiveQuery]          = useState<string | null>(null)
+  const [selectedChipEventId,  setSelectedChipEventId]  = useState<string | null>(null)
+  const [showAllTasks,         setShowAllTasks]         = useState(false)
+
+  const TASK_LIMIT = 5
 
   // Infer task tag filter from the selected chip's event
   function tagFilterForEvent(eventId: string | null): Task['tag'] | null {
@@ -183,9 +180,18 @@ export function Home() {
   }
 
   const chipTagFilter = tagFilterForEvent(selectedChipEventId)
-  const displayedTasks = chipTagFilter
-    ? pending.filter((t) => t.tag === chipTagFilter)
-    : pending
+
+  // Sort by due date: overdue first, then today, then upcoming, nulls last
+  const sortedTasks = [...(chipTagFilter ? pending.filter((t) => t.tag === chipTagFilter) : pending)]
+    .sort((a, b) => {
+      if (!a.due_date && !b.due_date) return 0
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return a.due_date.localeCompare(b.due_date)
+    })
+
+  const visibleTasks  = showAllTasks ? sortedTasks : sortedTasks.slice(0, TASK_LIMIT)
+  const hiddenCount   = sortedTasks.length - TASK_LIMIT
 
   return (
     <div className="min-h-screen" style={{ background: '#F7F4EF' }}>
@@ -244,40 +250,62 @@ export function Home() {
                   style={{ height: 72, background: '#EFEFEF' }}
                 />
               ))
-            ) : displayedTasks.length === 0 ? (
+            ) : sortedTasks.length === 0 ? (
               <p className="text-[13px]" style={{ color: '#B4B2A9' }}>
                 {chipTagFilter ? 'Nothing in this category.' : 'Nothing needs you right now.'}
               </p>
             ) : (
-              displayedTasks.map((task) => {
-                const agentLine   = isDemo ? DEMO_AGENT_MAP[task.title] : undefined
-                const agentAction = agentLine
-                  ? {
-                      label: 'Let Kinly handle it',
-                      onClick: () => {
-                        const q = DEMO_ACTION_QUERY[task.title]
-                        if (q) setActiveQuery(q)
-                      },
-                    }
-                  : undefined
-                const subtitle = isDemo
-                  ? (DEMO_SUBLINE_MAP[task.title] ?? '')
-                  : task.due_date
-                    ? `Due ${format(parseISO(task.due_date), 'MMM d')}`
-                    : ''
+              <>
+                {visibleTasks.map((task) => {
+                  const agentLine   = isDemo ? DEMO_AGENT_MAP[task.title] : undefined
+                  const agentAction = agentLine
+                    ? {
+                        label: 'Let Kinly handle it',
+                        onClick: () => {
+                          const q = DEMO_ACTION_QUERY[task.title]
+                          if (q) setActiveQuery(q)
+                        },
+                      }
+                    : undefined
+                  const subtitle = isDemo
+                    ? (DEMO_SUBLINE_MAP[task.title] ?? '')
+                    : task.due_date
+                      ? `Due ${format(parseISO(task.due_date), 'MMM d')}`
+                      : ''
 
-                return (
-                  <ActionCard
-                    key={task.id}
-                    title={task.title}
-                    subtitle={subtitle}
-                    member={tagToMember(task.tag)}
-                    timePill={taskPill(task)}
-                    agentLine={agentLine}
-                    agentAction={agentAction}
-                  />
-                )
-              })
+                  return (
+                    <ActionCard
+                      key={task.id}
+                      title={task.title}
+                      subtitle={subtitle}
+                      member={tagToMember(task.tag)}
+                      timePill={taskPill(task)}
+                      agentLine={agentLine}
+                      agentAction={agentAction}
+                    />
+                  )
+                })}
+
+                {/* Show more / show less */}
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => setShowAllTasks(true)}
+                    className="text-left transition-opacity hover:opacity-70"
+                    style={{ fontSize: 12, color: '#B4B2A9', paddingTop: 4 }}
+                  >
+                    +{hiddenCount} more
+                  </button>
+                )}
+                {showAllTasks && sortedTasks.length > TASK_LIMIT && (
+                  <button
+                    onClick={() => setShowAllTasks(false)}
+                    className="text-left transition-opacity hover:opacity-70"
+                    style={{ fontSize: 12, color: '#B4B2A9', paddingTop: 4 }}
+                  >
+                    Show less
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
