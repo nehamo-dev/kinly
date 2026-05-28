@@ -16,11 +16,17 @@ export const supabase = createClient(
 )
 
 // ── Connection warm-up ────────────────────────────────────────────────────────
-// Supabase has a ~600ms cold-connection penalty on the first authenticated
-// PostgREST request (TCP + TLS + JWT verification). Subsequent requests on
-// the same connection take ~23ms. Firing a cheap HEAD here — at module init,
-// before React renders or auth resolves — pre-establishes the TCP+TLS so the
-// first real query (loadFamilyId, tasks, events) arrives on a warm connection.
+// Supabase free tier pauses projects after ~1 week of inactivity. The first
+// request wakes the project (~20-30s). Firing cheap pings to both REST and
+// Auth at module init (before the user clicks anything) means the wake-up is
+// already in progress by the time they hit "See demo". Each ping has a 10s
+// abort so they don't hold browser connection slots open indefinitely.
 if (supabaseUrl && supabaseAnonKey) {
-  void fetch(`${supabaseUrl}/rest/v1/`, { method: 'HEAD' }).catch(() => {})
+  const warmPing = (url: string, extraHeaders?: Record<string, string>) => {
+    const ctrl = new AbortController()
+    setTimeout(() => ctrl.abort(), 10_000)
+    fetch(url, { method: 'HEAD', headers: extraHeaders, signal: ctrl.signal }).catch(() => {})
+  }
+  warmPing(`${supabaseUrl}/rest/v1/`)
+  warmPing(`${supabaseUrl}/auth/v1/`, { apikey: supabaseAnonKey })
 }

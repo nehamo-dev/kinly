@@ -48,20 +48,46 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     const markReady = () => { if (!done) { done = true; setReady(true) } }
 
     // ── Fast path: cached familyId for instant restore ───────────────────
-    // getSession() reads the JWT from localStorage (no network if token is
-    // still valid). If we also have a cached familyId we can call markReady()
-    // immediately and let loadFamilyId() validate in the background.
-    // This means hard-refresh feels instant even when Supabase is paused.
     const cachedFamilyId = getCachedFamilyId()
 
-    // If both a session token and a family ID are in localStorage, we can
-    // read the session synchronously right now (before the async getSession()
-    // resolves) so the failsafe can never outrace us and redirect to /welcome.
-    if (cachedFamilyId) {
+    // Derive the localStorage key Supabase uses for the auth token
+    const sbTokenKey = (() => {
       try {
-        const rawToken = localStorage.getItem(`sb-${new URL(import.meta.env.VITE_SUPABASE_URL ?? 'https://x.supabase.co').hostname.split('.')[0]}-auth-token`)
+        const ref = new URL(import.meta.env.VITE_SUPABASE_URL ?? 'https://x.supabase.co').hostname.split('.')[0]
+        return `sb-${ref}-auth-token`
+      } catch { return null }
+    })()
+
+    // ── Stale anonymous session cleanup ──────────────────────────────────
+    // When a demo user's anonymous JWT has expired, the Supabase SDK will try
+    // to refresh it on the next getSession() call — which requires a network
+    // round-trip that hangs indefinitely if the project is paused.
+    // Pre-emptively remove expired anonymous sessions so getSession() returns
+    // null immediately (localStorage read only, no network).
+    if (sbTokenKey) {
+      try {
+        const raw = localStorage.getItem(sbTokenKey)
+        if (raw) {
+          const parsed = JSON.parse(raw) as { expires_at?: number; user?: { is_anonymous?: boolean } }
+          const exp = parsed?.expires_at ?? 0
+          const isAnon = parsed?.user?.is_anonymous === true
+          const isExpired = exp < Math.floor(Date.now() / 1000)
+          if (isAnon && isExpired) {
+            localStorage.removeItem(sbTokenKey)
+            clearCachedFamilyId()
+          }
+        }
+      } catch {}
+    }
+
+    // If both a session token and a family ID are in localStorage, we can
+    // read the session synchronously right now so the failsafe can never
+    // outrace us and redirect to /welcome.
+    if (cachedFamilyId && sbTokenKey) {
+      try {
+        const rawToken = localStorage.getItem(sbTokenKey)
         if (rawToken) {
-          const parsed = JSON.parse(rawToken)
+          const parsed = JSON.parse(rawToken) as { expires_at?: number }
           const exp: number = parsed?.expires_at ?? 0
           if (exp > Math.floor(Date.now() / 1000)) {
             // Token is still valid — pre-seed session into store synchronously
@@ -75,8 +101,18 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // Failsafe — 5 s ceiling before we show the page regardless
     const failsafe = setTimeout(markReady, 5000)
 
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+    // ── getSession with timeout ───────────────────────────────────────────
+    // If getSession() hangs (e.g. SDK is mid-refresh over a slow connection),
+    // treat it as no-session after 4 s and let the failsafe handle the rest.
+    type SessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>
+    const sessionWithTimeout: Promise<SessionResult> = Promise.race([
+      supabase.auth.getSession(),
+      new Promise<SessionResult>((resolve) =>
+        setTimeout(() => resolve({ data: { session: null }, error: null }), 4000)
+      ),
+    ])
+
+    sessionWithTimeout.then(async ({ data: { session } }) => {
         setSession(session)
 
         if (session?.user) {

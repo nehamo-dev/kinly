@@ -54,15 +54,12 @@ export function Welcome() {
     setDemoStatus('Starting demo…')
     setError(null)
 
-    // Show a "warming up" note after 4 s so the user knows we're not frozen
-    const slowTimer = setTimeout(() => setDemoStatus('Warming up — just a moment…'), 4000)
-
-    // Hard timeout: fail after 25 s rather than hang forever
-    let timedOut = false
-    const timeoutId = setTimeout(() => { timedOut = true }, 25000)
+    // After 5 s without a response, tell the user the server is waking up.
+    // Supabase free tier can take 20-30 s to resume from a paused state.
+    const slowTimer = setTimeout(() => setDemoStatus('Server waking up (~30s on first load)…'), 5000)
 
     try {
-      const raceResult = await Promise.race([
+      await Promise.race([
         (async () => {
           const { data, error: authErr } = await supabase.auth.signInAnonymously()
           if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
@@ -73,21 +70,17 @@ export function Welcome() {
           try { localStorage.setItem('kinly-family-id', familyId) } catch {}
           setFamilyId(familyId)
           setIsDemo(true)
-          return familyId
+          navigate('/')
         })(),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+          setTimeout(() => reject(new Error('TIMEOUT')), 45000)
         ),
       ])
-
-      // Only navigate if we didn't already time out
-      if (!timedOut && raceResult) navigate('/')
-
     } catch (err) {
       const msg = (err as Error)?.message ?? ''
       console.error('[Kinly] Demo setup failed:', err)
       if (msg === 'TIMEOUT') {
-        setError('Setup is taking too long — Supabase may be waking up. Wait 10 s and try again.')
+        setError('Server is still warming up. Wait 30 s and try again.')
       } else {
         setError('Demo setup failed — please try again')
       }
@@ -95,7 +88,6 @@ export function Welcome() {
       setDemoStatus(null)
     } finally {
       clearTimeout(slowTimer)
-      clearTimeout(timeoutId)
     }
   }
 
