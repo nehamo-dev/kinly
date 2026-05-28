@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { EventRow } from '../../components/ui/EventRow'
 import { Card } from '../../components/ui/Card'
+import { EventDetailModal } from './EventDetailModal'
 import { DEMO_EVENTS } from '../../lib/demo'
 import type { FamilyEvent, Member } from '../../types'
 
@@ -51,6 +52,7 @@ function EventSkeleton({ index }: { index: number }) {
 
 export function TodaySchedule({ events, members, isLoading, isDemo }: TodayScheduleProps) {
   const [expanded, setExpanded] = useState(false)
+  const [detailEvent, setDetailEvent] = useState<FamilyEvent | null>(null)
   const navigate = useNavigate()
 
   const sorted = [...events].sort((a: FamilyEvent, b: FamilyEvent) => {
@@ -79,6 +81,14 @@ export function TodaySchedule({ events, members, isLoading, isDemo }: TodaySched
   }
 
   return (
+    <>
+    <EventDetailModal
+      event={detailEvent}
+      memberName={detailEvent ? getMemberName(detailEvent) : null}
+      subline={detailEvent ? getSubline(detailEvent) : null}
+      isDaily={detailEvent ? isDaily(detailEvent) : false}
+      onClose={() => setDetailEvent(null)}
+    />
     <section className="mb-8">
       <SectionHeader
         label="Today's Schedule"
@@ -101,6 +111,7 @@ export function TodaySchedule({ events, members, isLoading, isDemo }: TodaySched
                   memberName={getMemberName(event)}
                   subline={getSubline(event)}
                   daily={isDaily(event)}
+                  onClick={() => setDetailEvent(event)}
                 />
               ))}
               {hiddenCount > 0 && !expanded && (
@@ -116,5 +127,6 @@ export function TodaySchedule({ events, members, isLoading, isDemo }: TodaySched
         </div>
       </Card>
     </section>
+    </>
   )
 }

@@ -1,9 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
 import { Badge } from './Badge'
 import type { TaskTag } from '../../types'
 
 interface TaskRowProps {
   title: string
-  tags?: (TaskTag | 'member')[]
   memberName?: string | null
   tag?: TaskTag | null
   subline?: string
@@ -11,6 +11,8 @@ interface TaskRowProps {
   urgencyColor?: 'red' | 'green' | 'slate'
   done?: boolean
   onToggle?: () => void
+  onSnooze?: (when: 'tomorrow' | 'next-week') => void
+  onEdit?: () => void
 }
 
 // Circle border color matches the primary tag
@@ -29,14 +31,42 @@ const urgencyColors = {
   slate: 'text-slate-400',
 }
 
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="w-4 h-4">
+      <circle cx="8" cy="8" r="6.5" />
+      <polyline points="8,4.5 8,8 10.5,10" />
+    </svg>
+  )
+}
+
 export function TaskRow({
-  title, tag, memberName, subline, urgency, urgencyColor = 'slate', done, onToggle
+  title, tag, memberName, subline, urgency, urgencyColor = 'slate', done, onToggle, onSnooze, onEdit
 }: TaskRowProps) {
+  const [snoozeOpen, setSnoozeOpen] = useState(false)
+  const snoozeRef = useRef<HTMLDivElement>(null)
   const circleColor = tag ? (tagCircleColor[tag] || 'border-slate-300') : 'border-slate-300'
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!snoozeOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (snoozeRef.current && !snoozeRef.current.contains(e.target as Node)) {
+        setSnoozeOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [snoozeOpen])
+
+  function handleSnoozeOption(when: 'tomorrow' | 'next-week') {
+    setSnoozeOpen(false)
+    onSnooze?.(when)
+  }
 
   return (
     <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
-      {/* Colored ring checkbox */}
+      {/* Colored ring — mark done */}
       <button
         onClick={onToggle}
         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 transition-colors
@@ -50,8 +80,14 @@ export function TaskRow({
         )}
       </button>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
+      {/* Content — tappable to edit */}
+      <div
+        className={`flex-1 min-w-0 ${onEdit ? 'cursor-pointer' : ''}`}
+        onClick={onEdit}
+        role={onEdit ? 'button' : undefined}
+        tabIndex={onEdit ? 0 : undefined}
+        onKeyDown={onEdit ? (e) => { if (e.key === 'Enter' || e.key === ' ') onEdit() } : undefined}
+      >
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`text-sm font-medium ${done ? 'line-through text-slate-400' : 'text-slate-800'}`}>
             {title}
@@ -77,12 +113,43 @@ export function TaskRow({
         )}
       </div>
 
-      {/* Urgency label */}
-      {urgency && (
-        <span className={`text-xs font-semibold flex-shrink-0 mt-0.5 ${urgencyColors[urgencyColor]}`}>
-          {urgency}
-        </span>
-      )}
+      {/* Right side: urgency + snooze */}
+      <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+        {urgency && (
+          <span className={`text-xs font-semibold ${urgencyColors[urgencyColor]}`}>
+            {urgency}
+          </span>
+        )}
+
+        {onSnooze && (
+          <div ref={snoozeRef} className="relative">
+            <button
+              onClick={() => setSnoozeOpen((o) => !o)}
+              className="text-slate-300 hover:text-slate-500 transition-colors"
+              aria-label="Snooze task"
+            >
+              <ClockIcon />
+            </button>
+
+            {snoozeOpen && (
+              <div className="absolute right-0 top-6 z-50 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-[130px]">
+                <button
+                  onClick={() => handleSnoozeOption('tomorrow')}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <span className="text-slate-400">→</span> Tomorrow
+                </button>
+                <button
+                  onClick={() => handleSnoozeOption('next-week')}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <span className="text-slate-400">→</span> Next week
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

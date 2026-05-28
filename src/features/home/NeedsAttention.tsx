@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { isBefore, isToday, parseISO } from 'date-fns'
+import { addDays, format, isBefore, isToday, parseISO } from 'date-fns'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { TaskRow } from '../../components/ui/TaskRow'
 import { Card } from '../../components/ui/Card'
+import { EditTaskModal } from './EditTaskModal'
 import { supabase } from '../../lib/supabase'
 import { DEMO_TASKS } from '../../lib/demo'
 import type { Task } from '../../types'
@@ -15,8 +16,6 @@ interface NeedsAttentionProps {
   isLoading?: boolean
   isDemo?: boolean
   onRefresh: () => void
-  /** Local-only toggle used in demo mode instead of a Supabase write */
-  onDemoToggle?: (taskId: string) => void
 }
 
 function urgencyFor(task: Task): { label: string; color: 'red' | 'green' | 'slate' } {
@@ -69,8 +68,9 @@ function TaskSkeleton() {
   )
 }
 
-export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh, onDemoToggle }: NeedsAttentionProps) {
+export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh }: NeedsAttentionProps) {
   const [expanded, setExpanded] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const pending = tasks.filter((t) => !t.done)
   const sorted = sortTasks(pending)
@@ -78,21 +78,28 @@ export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh, onDemoTogg
   const hiddenCount = sorted.length - COLLAPSED_COUNT
 
   async function toggleTask(task: Task) {
-    if (onDemoToggle) {
-      // Demo mode: update local state only, no Supabase
-      onDemoToggle(task.id)
-      return
-    }
     await supabase.from('tasks').update({ done: !task.done }).eq('id', task.id)
     onRefresh()
   }
 
+  async function snoozeTask(task: Task, when: 'tomorrow' | 'next-week') {
+    const days = when === 'tomorrow' ? 1 : 7
+    const newDate = format(addDays(new Date(), days), 'yyyy-MM-dd')
+    await supabase.from('tasks').update({ due_date: newDate }).eq('id', task.id)
+    onRefresh()
+  }
+
   return (
+    <>
+    <EditTaskModal
+      task={editingTask}
+      onClose={() => setEditingTask(null)}
+      onSaved={() => { setEditingTask(null); onRefresh() }}
+    />
     <section className="mb-8">
       <SectionHeader
         label="Needs Attention"
         count={isLoading ? undefined : pending.length}
-        action={{ label: 'Snooze all', onClick: () => {} }}
       />
       <Card padding="none">
         <div className="px-4">
@@ -117,6 +124,8 @@ export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh, onDemoTogg
                     urgencyColor={color}
                     done={task.done}
                     onToggle={() => toggleTask(task)}
+                    onSnooze={(when) => snoozeTask(task, when)}
+                    onEdit={() => setEditingTask(task)}
                   />
                 )
               })}
@@ -134,5 +143,6 @@ export function NeedsAttention({ tasks, isLoading, isDemo, onRefresh, onDemoTogg
         </div>
       </Card>
     </section>
+    </>
   )
 }

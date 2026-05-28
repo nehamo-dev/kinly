@@ -73,8 +73,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (session.user.is_anonymous) {
             const store = useAuthStore.getState()
-            if (!store.familyId) {
-              // Stale anonymous session with no family — clear and send to Welcome
+            if (!store.familyId && window.location.pathname !== '/welcome') {
+              // Stale anonymous session with no family — clear and send to Welcome.
+              // Skip when already on /welcome so we don't abort an in-flight seed.
               setSession(null)
               setFamilyId(null)
               clearCachedFamilyId()
@@ -82,7 +83,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
               window.location.replace('/welcome')
               return
             }
-            setIsDemo(true)
+            // Only mark demo mode when a family actually exists in the store
+            if (store.familyId) setIsDemo(true)
           }
         } else {
           // No session — clear any stale cache

@@ -7,6 +7,7 @@ interface EventRowProps {
   subline?: string | null
   recurring?: boolean
   daily?: boolean
+  onClick?: () => void
 }
 
 function formatTime(t: string | null | undefined): { main: string; ampm: string } | null {
@@ -17,10 +18,16 @@ function formatTime(t: string | null | undefined): { main: string; ampm: string 
   return { main: `${hour}:${String(m).padStart(2, '0')}`, ampm }
 }
 
-export function EventRow({ timeStart, title, memberName, subline, daily }: EventRowProps) {
+export function EventRow({ timeStart, title, memberName, subline, daily, onClick }: EventRowProps) {
   const time = formatTime(timeStart)
   return (
-    <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
+    <div
+      className={`flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0 ${onClick ? 'cursor-pointer hover:bg-slate-50 -mx-4 px-4 rounded-xl transition-colors' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+    >
       {/* Time column */}
       <div className="w-16 flex-shrink-0 pt-0.5">
         {time ? (

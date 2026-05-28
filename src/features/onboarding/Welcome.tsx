@@ -4,7 +4,7 @@ import { Input } from '../../components/ui/Input'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { useNavigate } from 'react-router-dom'
-import { saveDemoState, DEMO_FAMILY_ID } from '../../lib/demoLocal'
+import { seedDemoFamily } from '../../lib/demo'
 
 export function Welcome() {
   const [email, setEmail] = useState('')
@@ -42,16 +42,29 @@ export function Welcome() {
     if (ssoErr) setError(ssoErr.message)
   }
 
-  function handleDemoMode() {
-    // Pure local demo — no Supabase, no network, instant.
-    // Data is synthesised from constants in demoLocal.ts and persisted
-    // in localStorage so hard-refresh stays in demo mode.
+  async function handleDemoMode() {
     setDemoLoading(true)
-    saveDemoState()
-    setFamilyId(DEMO_FAMILY_ID)
-    setIsDemo(true)
-    navigate('/')
-    // (setDemoLoading(false) intentionally omitted — component unmounts on navigate)
+    setError(null)
+    try {
+      // Create an anonymous Supabase session — gives a real JWT with no sign-up required
+      const { data, error: authErr } = await supabase.auth.signInAnonymously()
+      if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
+
+      // Seed demo family data (4 parallelised batches, ~1 s on warm connection)
+      const familyId = await seedDemoFamily(data.user.id)
+
+      // Cache so hard-refresh restores instantly without re-fetching
+      try { localStorage.setItem('kinly-family-id', familyId) } catch {}
+
+      setFamilyId(familyId)
+      setIsDemo(true)
+      navigate('/')
+      // setDemoLoading(false) intentionally omitted — component unmounts on navigate
+    } catch (err) {
+      console.error('[Kinly] Demo setup failed:', err)
+      setError('Demo setup failed — please try again')
+      setDemoLoading(false)
+    }
   }
 
   return (

@@ -8,9 +8,10 @@ interface EmailRowProps {
   timestamp: string
   tag?: TaskTag | null
   memberName?: string | null
+  onCreateTask?: () => void
 }
 
-export function EmailRow({ title, domain, preview, timestamp, tag, memberName }: EmailRowProps) {
+export function EmailRow({ title, domain, preview, timestamp, tag, memberName, onCreateTask }: EmailRowProps) {
   return (
     <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
       {/* Mail icon */}
@@ -45,6 +46,17 @@ export function EmailRow({ title, domain, preview, timestamp, tag, memberName }:
           {' — '}
           {preview}
         </p>
+        {onCreateTask && (
+          <button
+            onClick={onCreateTask}
+            className="mt-1.5 text-xs text-slate-400 hover:text-[#E8392A] transition-colors flex items-center gap-1"
+          >
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="w-3 h-3">
+              <path d="M6 1v10M1 6h10" />
+            </svg>
+            Add as task
+          </button>
+        )}
       </div>
     </div>
   )
