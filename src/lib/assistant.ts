@@ -50,10 +50,8 @@ function buildSystemContent(context: AssistantContext): string {
   return lines.join('\n')
 }
 
-// ── Streaming (primary) ───────────────────────────────────────────────────────
-// Streams the Groq response chunk-by-chunk, calling onChunk for each delta.
-
-export async function streamKinly(
+// ── Streaming via SDK (dev — uses VITE_GROQ_API_KEY) ─────────────────────────
+async function streamViaSDK(
   messages: Message[],
   context: AssistantContext,
   onChunk: (chunk: string) => void,
@@ -79,6 +77,67 @@ export async function streamKinly(
     const delta = chunk.choices[0]?.delta?.content ?? ''
     if (delta) onChunk(delta)
   }
+}
+
+// ── Streaming via server proxy (prod — uses /api/kinly) ───────────────────────
+async function streamViaProxy(
+  messages: Message[],
+  context: AssistantContext,
+  onChunk: (chunk: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch('/api/kinly', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, context }),
+    signal,
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string }
+    throw new Error(err.error ?? `HTTP ${res.status}`)
+  }
+
+  const reader  = res.body!.getReader()
+  const decoder = new TextDecoder()
+  let   buffer  = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    // Process complete SSE lines
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''   // keep incomplete last line for next chunk
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const data = line.slice(6).trim()
+      if (data === '[DONE]') return
+      try {
+        const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> }
+        const chunk  = parsed.choices?.[0]?.delta?.content ?? ''
+        if (chunk) onChunk(chunk)
+      } catch { /* skip malformed lines */ }
+    }
+  }
+}
+
+// ── Public streaming entry-point ──────────────────────────────────────────────
+// Uses the SDK directly in dev (VITE_GROQ_API_KEY set), proxy in production.
+
+export async function streamKinly(
+  messages: Message[],
+  context: AssistantContext,
+  onChunk: (chunk: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const clientKey = import.meta.env.VITE_GROQ_API_KEY as string | undefined
+  if (clientKey) {
+    return streamViaSDK(messages, context, onChunk, signal)
+  }
+  return streamViaProxy(messages, context, onChunk, signal)
 }
 
 // ── Non-streaming (legacy / fallback) ────────────────────────────────────────
