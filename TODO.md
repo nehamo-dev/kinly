@@ -13,11 +13,13 @@ Last updated: 2026-05-28
 - [x] `Welcome` — two-column sign-in: dark brand panel (#1A1A18) left, warm form panel (#F7F4EF) right; wordmark logo, amber tagline, Google SSO, magic link, demo mode; mobile collapses to slim bar
 
 ### Home / Today screen
-- [x] `HeroHeader` — dark full-width panel, time-aware greeting, dynamic headline, event chip strip, rotating placeholder input bar, microphone button
+- [x] `HeroHeader` — dark full-width panel, time-aware greeting, dynamic headline, event chip strip (clickable, amber active state), rotating placeholder input bar, microphone button
 - [x] `ActionCard` — left-border by member type, title + time pill, subtitle, agent line (purple pill), expand-on-click CTA, isHandled fade + "noted" badge
-- [x] `ScheduleCard` — timeline rows, member chips (Lila/Family/Us), amber left border for current/next event, past events fade to 0.35 opacity
+- [x] `ScheduleCard` — timeline rows, member chips, amber left border for current/next event, past events fade; `highlightEventId` prop dims non-matching rows when chip is active
 - [x] `ComingUpCard` — simple forward-look card with label + date label
-- [x] `Home.tsx` — two-column layout (55% left #F7F4EF / 45% right #FDFCF9), HeroHeader full-width above columns, ActionCards from tasks, ScheduleCard, ComingUpCard from occasions
+- [x] `Home.tsx` — two-column layout (55%/45%), HeroHeader full-width, chip strip filters ActionCards/ScheduleCard by tag
+- [x] ActionCard "Let Kinly handle it" — wired to Groq with context-specific query per task (`DEMO_ACTION_QUERY` map)
+- [x] HeroHeader chip strip filtering — clicking a chip filters left/right columns
 
 ### Calendar screen
 - [x] `CalendarScreen` — horizontal 7-day strip with event dots (member-color-coded), member filter chips, selected day event list, week navigation
@@ -29,68 +31,59 @@ Last updated: 2026-05-28
 
 ### AI / Kinly assistant
 - [x] `groq-sdk` installed
-- [x] `assistant.ts` — Groq client wrapper, `askKinly()` with family context injection, llama-3.3-70b-versatile
-- [x] `KinlyPanel` — slide-in panel below hero, shows query + streaming-style response, dismiss button
-- [x] `Home.tsx` — HeroHeader `onQuery` wired to `KinlyPanel`
+- [x] `assistant.ts` — `streamKinly()` entry-point: Groq SDK in dev (VITE_GROQ_API_KEY), proxies via `/api/kinly` in production; full SSE parsing; AbortController support
+- [x] `KinlyPanel` — multi-turn conversation, character-by-character streaming output, blinking cursor, pulsing dots while waiting for first chunk, abort-on-new-query, follow-up input bar
+- [x] `/api/kinly` Vercel Edge Function — server-side Groq key, streams SSE back; API key never reaches browser
 
 ### Other
 - [x] `parseCommand.ts` — NL parser for tasks/events ("Dentist for Lila Friday 3pm")
 - [x] `CommandBar` — live input with NL parsing, pre-fills AddEventModal / AddTaskModal
 - [x] `CalendarScreen` — week view with `defaultDate` per day
 
----
-
-## 🔨 In Progress
-
-- [ ] **Groq API key** — add `VITE_GROQ_API_KEY` value to `.env.local` to activate Kinly AI responses
+### Infrastructure
+- [x] `vercel.json` — API rewrite before SPA catch-all, security headers (HSTS, X-Frame-Options, etc.)
+- [x] `tsconfig.api.json` — separate TS project for `api/` with `types: ["node"]`, `composite: true`
+- [x] Production deploy — `https://kinly-six.vercel.app` live, `GROQ_API_KEY` set in Vercel dashboard
+- [x] Demo mode fix — `user_families` insert error was silently swallowed; fixed error propagation in `demo.ts`
+- [x] `loadFamilyId` — switched `.single()` → `.maybeSingle()` to avoid 406 on 0 rows
 
 ---
 
 ## 📋 Backlog
 
 ### Home / Today
-- [ ] `KinlyPanel` — proper typewriter / streaming effect for Groq response text
-- [ ] HeroHeader chip strip — clicking a chip should filter ActionCards / ScheduleCard
-- [ ] ActionCard "Let Kinly handle it" — wire to actual Groq action (draft text, pre-fill form)
-- [ ] Handled tasks — swipe-to-dismiss or "mark handled" action on ActionCard
-- [ ] Mobile layout — single-column below 768px breakpoint
+- [ ] **Mobile layout** — single-column below 768px (skipped; `flex-col md:flex-row` classes in place but untested end-to-end)
+- [ ] Handled tasks — swipe-to-dismiss or explicit "mark done" on ActionCard
+- [ ] Assistant context — pass full task list + event details to Groq (currently sends count + top events only)
+- [ ] Suggested follow-up questions after each KinlyPanel answer
+- [ ] Voice input — microphone button in HeroHeader is non-functional
 
 ### Calendar
-- [ ] Add event on calendar — `AddEventModal` defaultDate wired correctly ✓; verify with demo data
-- [ ] Past events — grey out days before today in the strip
+- [ ] Past days — grey out dates before today in the 7-day strip
 - [ ] Month view toggle
 
 ### Family
 - [ ] Conversational follow-up — after adding a member, Kinly asks "what activities does she do?"
 - [ ] Edit member — tap member card to edit details
-- [ ] Add activity via Kinly input (currently form-only)
-- [ ] Add occasion via Kinly input
-
-### AI / Kinly assistant
-- [ ] Move Groq API key server-side (Vercel Edge Function) to avoid browser exposure
-- [ ] Assistant context — pass full today's task list to Groq, not just count
-- [ ] Multi-turn chat — persist conversation history in KinlyPanel
-- [ ] Suggested follow-up questions after each answer
-- [ ] Voice input (microphone button in HeroHeader currently non-functional)
+- [ ] Add activity / occasion via Kinly natural-language input (currently form-only)
 
 ### Inbox
-- [ ] Inbox screen — render flagged emails with Kinly action suggestions
+- [ ] Inbox screen — render flagged emails with member badges + Kinly action suggestions
 - [ ] Email → task creation flow
 
-### Home/settings
-- [ ] Home screen (`/home` route) — currently shows ShellScreen placeholder
-- [ ] Settings / profile screen
+### Settings
+- [ ] Settings / profile screen (currently placeholder)
+- [ ] Home screen (`/home` route) — currently ShellScreen placeholder
 
 ### Infrastructure
-- [ ] `.env.local` — fill `VITE_GOOGLE_CLIENT_ID` + `VITE_GOOGLE_CLIENT_SECRET` for calendar sync
-- [ ] Supabase RLS — verify policies are correct for demo (anonymous) users
-- [ ] Production Vercel deploy — set env vars in Vercel dashboard
+- [ ] Google OAuth — fill `VITE_GOOGLE_CLIENT_ID` + `VITE_GOOGLE_CLIENT_SECRET` for calendar sync (skipped for now)
+- [ ] Supabase RLS — add explicit INSERT policy on `families` table (currently relies on default grants; low risk but should be locked down before production)
+- [ ] Rate limiting on `/api/kinly` — no rate limiting currently; open to abuse in production
 
 ---
 
 ## 🐛 Known Issues
 
-- Demo data shows blank until Supabase wakes from cold start (free tier, ~20s)
-- `VITE_GROQ_API_KEY` is client-side — fine for demo, move server-side before production
-- HeroHeader event chips use first 4 events from today, not filtered by relevance
-- `format` imported but used only inside `addMember()` closure in `Family.tsx` — TypeScript happy, can refactor later
+- HeroHeader event chips use first 4 events from today, not filtered by relevance or time proximity
+- `format` imported but used only inside `addMember()` closure in `Family.tsx` — can refactor later
+- Vercel build shows a TS2591 `process` warning for `api/kinly.ts` even with `tsconfig.api.json` — non-fatal, function works at runtime
