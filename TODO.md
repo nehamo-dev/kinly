@@ -10,6 +10,7 @@ Last updated: 2026-05-28
 - [x] Tailwind v4 design tokens in `index.css` (k-base, k-nav, k-amber, k-purple, k-teal, k-pink, pill tokens, agent tokens)
 - [x] `TopNav` — dark redesign (#1A1A18), amber logo, active pill, notification bell, user initials
 - [x] `DemoBanner` — dark theme, amber "Sign up" link
+- [x] `Welcome` — two-column sign-in: dark brand panel (#1A1A18) left, warm form panel (#F7F4EF) right; wordmark logo, amber tagline, Google SSO, magic link, demo mode; mobile collapses to slim bar
 
 ### Home / Today screen
 - [x] `HeroHeader` — dark full-width panel, time-aware greeting, dynamic headline, event chip strip, rotating placeholder input bar, microphone button

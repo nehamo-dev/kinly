@@ -21,15 +21,32 @@ Run every item before pushing. Add new cases whenever a bug is reported or a fea
 
 ### 2. Welcome screen
 
-- [ ] Logo renders: three-dot smiley in tomato red (#E8392A), white background
-- [ ] Email field + "Send magic link" button visible
-- [ ] "Continue with Google" button visible
-- [ ] "✦ Try with demo data" ghost button visible
-- [ ] "No account required · resets after 24 hours" caption visible
-- [ ] Clicking "Send magic link" with a valid email shows the confirmation screen ("Check your inbox")
-- [ ] Confirmation screen shows the entered email address
-- [ ] "Use a different email" link resets back to the form
+**Layout — two-column split (≥768px)**
+- [ ] Left panel: dark background (#1A1A18), "kinly" wordmark + amber inline dot
+- [ ] Left panel: tagline "For families who have **a lot** going on." (amber "a lot"), sub-copy visible
+- [ ] Left panel: "Trusted by 10,000+ families" trust badge at bottom
+- [ ] Right panel: warm parchment background (#F7F4EF), max-width 340px form area
+- [ ] Vertical divider between panels; no card border or drop shadow on the form
+
+**Layout — mobile (<768px)**
+- [ ] Left panel collapses to slim bar at top (logo only, tagline + badge hidden)
+- [ ] Form fills remaining viewport height; no horizontal overflow
+
+**Form elements**
+- [ ] "Continue with Google" button visible (white, bordered, Google SVG icon)
+- [ ] "or use email" divider visible between Google button and email field
+- [ ] Email label "EMAIL" in small-caps 11px above input
+- [ ] Email input focus ring turns purple (#AFA9EC)
+- [ ] "Send magic link" button: dark (#1A1A18) background, IconSend icon
+- [ ] Clicking "Send magic link" with a valid email replaces the button with "Check your inbox — link sent ✓" (no separate confirmation screen)
+- [ ] Demo button: purple-tint background (#EEEDFE), label "See it with a real family's week", IconSparkles icon
+- [ ] Demo button caption: "No account needed · resets after 24 hours"
+- [ ] Terms line at bottom: "By continuing you agree to our Terms and Privacy Policy. We never sell your data. Ever."
 - [ ] Hard-refresh on `/welcome` does NOT 404 (SPA rewrite in vercel.json)
+
+**Loading states**
+- [ ] Clicking "Send magic link" shows a spinning indicator inside the button while request is in flight
+- [ ] Clicking "See it with a real family's week" shows a spinning indicator inside the button while seeding
 
 ---
 
