@@ -60,6 +60,20 @@ const DEMO_AGENT_MAP: Record<string, string> = {
   "Plan Noah's birthday":             'Kinly can suggest venues + draft invites',
   'HVAC service appointment':         'Kinly can find 3 open slots',
 }
+
+// Groq queries fired when "Let Kinly handle it" is clicked per task
+const DEMO_ACTION_QUERY: Record<string, string> = {
+  'House cleaning overdue by 3 days':
+    "Maria's Cleaning Co. is 3 days overdue on a biweekly schedule. Draft a short, friendly text to reschedule for the next available slot this week.",
+  'Complete soccer registration':
+    "I need to complete Lila's soccer registration at seahawkssoccer.org before Friday — it needs a payment and a medical form. What's the quickest way to get this done, and what info will I need?",
+  'Confirm Saturday babysitter':
+    "Draft a short, friendly text to Jess Nguyen confirming she's babysitting on Saturday evening for our anniversary dinner.",
+  "Plan Noah's birthday":
+    "Noah's 7th birthday is in 3 weeks. Suggest 3 venue ideas suitable for kids his age and draft a short, casual invite message I can send to parents.",
+  'HVAC service appointment':
+    "I need to book an HVAC seasonal service with PNW Comfort Systems. Write a brief call script for booking an appointment for next week.",
+}
 DEMO_TASKS.forEach((t) => { DEMO_SUBLINE_MAP[t.title] = t.subline })
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -232,7 +246,13 @@ export function Home() {
               displayedTasks.map((task) => {
                 const agentLine   = isDemo ? DEMO_AGENT_MAP[task.title] : undefined
                 const agentAction = agentLine
-                  ? { label: 'Let Kinly handle it', onClick: () => {} }
+                  ? {
+                      label: 'Let Kinly handle it',
+                      onClick: () => {
+                        const q = DEMO_ACTION_QUERY[task.title]
+                        if (q) setActiveQuery(q)
+                      },
+                    }
                   : undefined
                 const subtitle = isDemo
                   ? (DEMO_SUBLINE_MAP[task.title] ?? '')
