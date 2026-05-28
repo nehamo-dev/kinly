@@ -20,6 +20,9 @@ export function Welcome() {
   const navigate    = useNavigate()
   const setFamilyId = useAuthStore((s) => s.setFamilyId)
   const setIsDemo   = useAuthStore((s) => s.setIsDemo)
+  // Read current auth state — AuthProvider may have already restored a session
+  const storeSession  = useAuthStore((s) => s.session)
+  const storeFamilyId = useAuthStore((s) => s.familyId)
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -54,19 +57,61 @@ export function Welcome() {
     setDemoStatus('Starting demo…')
     setError(null)
 
-    // After 5 s without a response, tell the user the server is waking up.
-    // Supabase free tier can take 20-30 s to resume from a paused state.
-    const slowTimer = setTimeout(() => setDemoStatus('Server waking up (~30s on first load)…'), 5000)
+    // ── Tier 1: zero-network fast path ───────────────────────────────────────
+    // AuthProvider restores the session from localStorage on every page load.
+    // If it already found a valid anonymous session + family, just navigate.
+    if (storeSession?.user?.is_anonymous && storeFamilyId) {
+      setIsDemo(true)
+      navigate('/')
+      return
+    }
+
+    const slowTimer = setTimeout(() => setDemoStatus('Server waking up (~30 s on first load)…'), 5000)
 
     try {
       await Promise.race([
         (async () => {
-          const { data, error: authErr } = await supabase.auth.signInAnonymously()
-          if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
+          // ── Tier 2: existing anonymous user, find their family ────────────
+          // signInAnonymously() is rate-limited per IP. If we already have a
+          // session (but AuthProvider didn't find a family), look it up first.
+          let userId: string | null = storeSession?.user?.id ?? null
+
+          if (!userId) {
+            // Try a quick getSession() — 3 s cap so we don't hang here
+            type SR = Awaited<ReturnType<typeof supabase.auth.getSession>>
+            const { data: { session } } = await Promise.race<SR>([
+              supabase.auth.getSession(),
+              new Promise<SR>((r) => setTimeout(() => r({ data: { session: null }, error: null }), 3000)),
+            ])
+            if (session?.user?.is_anonymous) userId = session.user.id
+          }
+
+          if (userId) {
+            const { data: uf } = await supabase
+              .from('user_families')
+              .select('family_id')
+              .eq('user_id', userId)
+              .limit(1)
+              .maybeSingle()
+            if (uf?.family_id) {
+              // Found an existing demo family — reuse it, no seed needed
+              try { localStorage.setItem('kinly-family-id', uf.family_id) } catch {}
+              setFamilyId(uf.family_id)
+              setIsDemo(true)
+              navigate('/')
+              return
+            }
+          }
+
+          // ── Tier 3: create new anonymous user and seed ────────────────────
+          if (!userId) {
+            const { data, error: authErr } = await supabase.auth.signInAnonymously()
+            if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
+            userId = data.user.id
+          }
 
           setDemoStatus('Building your family…')
-          const familyId = await seedDemoFamily(data.user.id)
-
+          const familyId = await seedDemoFamily(userId)
           try { localStorage.setItem('kinly-family-id', familyId) } catch {}
           setFamilyId(familyId)
           setIsDemo(true)
@@ -79,11 +124,9 @@ export function Welcome() {
     } catch (err) {
       const msg = (err as Error)?.message ?? ''
       console.error('[Kinly] Demo setup failed:', err)
-      if (msg === 'TIMEOUT') {
-        setError('Server is still warming up. Wait 30 s and try again.')
-      } else {
-        setError('Demo setup failed — please try again')
-      }
+      setError(msg === 'TIMEOUT'
+        ? 'Server timed out. Wait 30 s and try again.'
+        : `Demo setup failed: ${msg || 'unknown error'}`)
       setDemoLoading(false)
       setDemoStatus(null)
     } finally {
