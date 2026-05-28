@@ -154,7 +154,17 @@ export async function seedDemoFamily(userId: string): Promise<string> {
   if (famErr || !family) throw famErr || new Error('Failed to create family')
   const familyId: string = family.id
 
-  // ── Batch 2 (parallel): link user + members + providers ─────────────────────
+  // ── Batch 2a: link user to family first ─────────────────────────────────────
+  // MUST be sequential: members/providers use RLS policies that call
+  // my_family_ids(), which queries user_families. If we insert user_families
+  // in parallel with members, the RLS check can run before the user_families
+  // row commits → my_family_ids() returns empty → members insert fails.
+  const { error: userFamilyErr } = await supabase
+    .from('user_families')
+    .insert({ user_id: userId, family_id: familyId, role: 'manager' })
+  if (userFamilyErr) throw userFamilyErr
+
+  // ── Batch 2b (parallel): members + providers ─────────────────────────────────
   const memberRows: Omit<Member, 'id'>[] = [
     { family_id: familyId, name: 'Sarah Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#E8392A' },
     { family_id: familyId, name: 'James Martin', role: 'parent', date_of_birth: null, school: null, grade: null, avatar_color: '#3B82F6' },
@@ -176,20 +186,15 @@ export async function seedDemoFamily(userId: string): Promise<string> {
     { family_id: familyId, name: 'Ms. Chen', type: 'tutor', rating: 4, phone: null, email: null, notes: null },
   ]
 
-  const [userFamilyResult, membersResult, providersResult] = await Promise.all([
-    // link user
-    supabase.from('user_families').insert({ user_id: userId, family_id: familyId, role: 'manager' }),
-    // members
+  const [membersResult, providersResult] = await Promise.all([
     supabase.from('members').insert(memberRows).select(),
-    // providers
     supabase.from('providers').insert(providerRows).select(),
   ])
 
-  if (userFamilyResult.error) throw userFamilyResult.error
   const members = membersResult.data
   const provs = providersResult.data
-  if (!members) throw membersResult.error || new Error('Failed to create members')
-  if (!provs) throw providersResult.error || new Error('Failed to create providers')
+  if (!members?.length) throw membersResult.error || new Error('Failed to create members')
+  if (!provs?.length) throw providersResult.error || new Error('Failed to create providers')
 
   const [, , lila, noah] = members
   const [mariasCo] = provs
