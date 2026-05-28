@@ -176,7 +176,7 @@ export async function seedDemoFamily(userId: string): Promise<string> {
     { family_id: familyId, name: 'Ms. Chen', type: 'tutor', rating: 4, phone: null, email: null, notes: null },
   ]
 
-  const [, membersResult, providersResult] = await Promise.all([
+  const [userFamilyResult, membersResult, providersResult] = await Promise.all([
     // link user
     supabase.from('user_families').insert({ user_id: userId, family_id: familyId, role: 'manager' }),
     // members
@@ -185,6 +185,7 @@ export async function seedDemoFamily(userId: string): Promise<string> {
     supabase.from('providers').insert(providerRows).select(),
   ])
 
+  if (userFamilyResult.error) throw userFamilyResult.error
   const members = membersResult.data
   const provs = providersResult.data
   if (!members) throw membersResult.error || new Error('Failed to create members')

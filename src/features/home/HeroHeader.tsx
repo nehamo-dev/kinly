@@ -60,9 +60,11 @@ interface HeroHeaderProps {
   members: Member[]
   taskCount: number
   onQuery: (q: string) => void
+  selectedEventId?: string | null
+  onChipClick?: (eventId: string | null) => void
 }
 
-export function HeroHeader({ events, taskCount, onQuery }: HeroHeaderProps) {
+export function HeroHeader({ events, taskCount, onQuery, selectedEventId, onChipClick }: HeroHeaderProps) {
   const [value, setValue] = useState('')
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [visible, setVisible] = useState(true)
@@ -96,24 +98,34 @@ export function HeroHeader({ events, taskCount, onQuery }: HeroHeaderProps) {
 
         {/* Greeting */}
         <div>
-          <h1 className="text-[24px] font-[500] leading-tight tracking-[-0.5px]" style={{ color: '#F7F4EF' }}>
+          <h1 className="text-[20px] md:text-[24px] font-[500] leading-tight tracking-[-0.5px]" style={{ color: '#F7F4EF' }}>
             {getGreeting()}. {getHeadline(taskCount, events.length)}
           </h1>
         </div>
 
-        {/* Day strip */}
+        {/* Day strip — horizontally scrollable on mobile */}
         {chips.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-hidden">
-            {chips.map((e) => (
-              <span
-                key={e.id}
-                className="flex items-center gap-1.5 rounded-full text-[11px] font-medium flex-shrink-0 px-2.5 py-1"
-                style={{ background: '#2C2C2A', color: '#888780' }}
-              >
-                {chipIcon(e.title)}
-                {chipLabel(e)}
-              </span>
-            ))}
+          <div
+            className="flex items-center gap-1.5 overflow-x-auto"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {chips.map((e) => {
+              const active = selectedEventId === e.id
+              return (
+                <span
+                  key={e.id}
+                  className="flex items-center gap-1.5 rounded-full text-[11px] font-medium flex-shrink-0 px-2.5 py-1 cursor-pointer transition-all"
+                  style={{
+                    background: active ? '#EF9F27' : '#2C2C2A',
+                    color:      active ? '#1A1A18' : '#888780',
+                  }}
+                  onClick={() => onChipClick?.(active ? null : e.id)}
+                >
+                  {chipIcon(e.title)}
+                  {chipLabel(e)}
+                </span>
+              )
+            })}
           </div>
         )}
 

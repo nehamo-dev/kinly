@@ -5,6 +5,7 @@ interface ScheduleCardProps {
   members: Member[]
   isLoading?: boolean
   isDemo?: boolean
+  highlightEventId?: string | null
 }
 
 function fmtTime(t: string | null | undefined): string {
@@ -57,7 +58,7 @@ function getChip(event: FamilyEvent, members: Member[], isDemo?: boolean): Chip 
   return null
 }
 
-export function ScheduleCard({ events, members, isLoading, isDemo }: ScheduleCardProps) {
+export function ScheduleCard({ events, members, isLoading, isDemo, highlightEventId }: ScheduleCardProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-2.5 animate-pulse">
@@ -100,13 +101,15 @@ export function ScheduleCard({ events, members, isLoading, isDemo }: ScheduleCar
         const past = event.time_start ? toMin(event.time_start) < nowMin - 90 : false
         const active = idx === activeIdx
         const chip = getChip(event, members, isDemo)
+        // Dim events that don't match the active chip filter
+        const dimmed = highlightEventId != null && event.id !== highlightEventId
 
         return (
           <div
             key={event.id}
-            className="flex items-center gap-2.5 py-[7px]"
+            className="flex items-center gap-2.5 py-[7px] transition-opacity duration-200"
             style={{
-              opacity: past ? 0.35 : 1,
+              opacity: dimmed ? 0.2 : past ? 0.35 : 1,
               borderLeft: active
                 ? '2px solid #EF9F27'
                 : '2px solid transparent',

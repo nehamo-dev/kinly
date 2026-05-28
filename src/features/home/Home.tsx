@@ -140,7 +140,32 @@ export function Home() {
   const pending   = tasks.filter((t) => !t.done)
   const taskCount = pending.length
 
-  const [activeQuery, setActiveQuery] = useState<string | null>(null)
+  const [activeQuery,        setActiveQuery]        = useState<string | null>(null)
+  const [selectedChipEventId, setSelectedChipEventId] = useState<string | null>(null)
+
+  // Infer task tag filter from the selected chip's event
+  function tagFilterForEvent(eventId: string | null): Task['tag'] | null {
+    if (!eventId) return null
+    const ev = events.find((e) => e.id === eventId)
+    if (!ev) return null
+    const t = ev.title.toLowerCase()
+    // Couple events → occasion tasks
+    if (t.includes('anniversary') || t.includes('date night')) return 'occasion'
+    // Family / shared events → no filter
+    if (t.includes('family') || t.includes('sync') || t.includes('morning')) return null
+    // Member-specific event — look up member role
+    if (ev.member_id) {
+      const member = members.find((m) => m.id === ev.member_id)
+      if (member?.role === 'child') return 'kid'
+    }
+    // Fallback: kid (most chips are child-related)
+    return 'kid'
+  }
+
+  const chipTagFilter = tagFilterForEvent(selectedChipEventId)
+  const displayedTasks = chipTagFilter
+    ? pending.filter((t) => t.tag === chipTagFilter)
+    : pending
 
   return (
     <div className="min-h-screen" style={{ background: '#F7F4EF' }}>
@@ -151,6 +176,8 @@ export function Home() {
         members={members}
         taskCount={taskCount}
         onQuery={(q) => setActiveQuery(q)}
+        selectedEventId={selectedChipEventId}
+        onChipClick={(id) => setSelectedChipEventId(id)}
       />
 
       {/* ── Kinly AI panel (shows when query is active) ──────────────────── */}
@@ -168,17 +195,17 @@ export function Home() {
 
       {/* ── Two-column body ──────────────────────────────────────────────── */}
       <div
-        className="max-w-[1200px] mx-auto flex"
+        className="max-w-[1200px] mx-auto flex flex-col md:flex-row"
         style={{ minHeight: 'calc(100vh - 180px)' }}
       >
 
-        {/* Left col — 55% — tasks / actions */}
+        {/* Left col — full width on mobile, 55% on md+ — tasks / actions */}
         <div
+          className="w-full md:w-[55%] md:border-r"
           style={{
-            width: '55%',
             background: '#F7F4EF',
             padding: '20px 24px',
-            borderRight: '0.5px solid #E8E4DC',
+            borderColor: '#E8E4DC',
           }}
         >
           <p
@@ -197,12 +224,12 @@ export function Home() {
                   style={{ height: 72, background: '#EFEFEF' }}
                 />
               ))
-            ) : pending.length === 0 ? (
+            ) : displayedTasks.length === 0 ? (
               <p className="text-[13px]" style={{ color: '#B4B2A9' }}>
-                Nothing needs you right now.
+                {chipTagFilter ? 'Nothing in this category.' : 'Nothing needs you right now.'}
               </p>
             ) : (
-              pending.map((task) => {
+              displayedTasks.map((task) => {
                 const agentLine   = isDemo ? DEMO_AGENT_MAP[task.title] : undefined
                 const agentAction = agentLine
                   ? { label: 'Let Kinly handle it', onClick: () => {} }
@@ -229,10 +256,10 @@ export function Home() {
           </div>
         </div>
 
-        {/* Right col — 45% — schedule + coming up */}
+        {/* Right col — full width on mobile, 45% on md+ — schedule + coming up */}
         <div
+          className="w-full md:w-[45%]"
           style={{
-            width: '45%',
             background: '#FDFCF9',
             padding: '20px 24px',
           }}
@@ -249,6 +276,7 @@ export function Home() {
             members={members}
             isLoading={scheduleLoading}
             isDemo={isDemo}
+            highlightEventId={selectedChipEventId}
           />
 
           {/* Coming up — only when occasions are loaded and available */}

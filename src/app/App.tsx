@@ -54,8 +54,26 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // This means hard-refresh feels instant even when Supabase is paused.
     const cachedFamilyId = getCachedFamilyId()
 
-    // Failsafe — 2 s ceiling before we show the page regardless
-    const failsafe = setTimeout(markReady, 2000)
+    // If both a session token and a family ID are in localStorage, we can
+    // read the session synchronously right now (before the async getSession()
+    // resolves) so the failsafe can never outrace us and redirect to /welcome.
+    if (cachedFamilyId) {
+      try {
+        const rawToken = localStorage.getItem(`sb-${new URL(import.meta.env.VITE_SUPABASE_URL ?? 'https://x.supabase.co').hostname.split('.')[0]}-auth-token`)
+        if (rawToken) {
+          const parsed = JSON.parse(rawToken)
+          const exp: number = parsed?.expires_at ?? 0
+          if (exp > Math.floor(Date.now() / 1000)) {
+            // Token is still valid — pre-seed session into store synchronously
+            setSession(parsed as Parameters<typeof setSession>[0])
+            setFamilyId(cachedFamilyId)
+          }
+        }
+      } catch { /* ignore — async path will handle it */ }
+    }
+
+    // Failsafe — 5 s ceiling before we show the page regardless
+    const failsafe = setTimeout(markReady, 5000)
 
     supabase.auth.getSession()
       .then(async ({ data: { session } }) => {
@@ -116,7 +134,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       .select('family_id')
       .eq('user_id', userId)
       .limit(1)
-      .single()
+      .maybeSingle()
     if (data?.family_id) {
       setCachedFamilyId(data.family_id)  // keep cache fresh
       setFamilyId(data.family_id)
