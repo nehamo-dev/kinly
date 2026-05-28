@@ -1,19 +1,58 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import "tailwindcss";
 
+/* ── Kinly design tokens ──────────────────────────────────────────────────── */
+@theme {
+  /* Backgrounds */
+  --color-k-base:    #F7F4EF;
+  --color-k-card:    #FFFFFF;
+  --color-k-surface: #FDFCF9;
+  --color-k-nav:     #1A1A18;
+  --color-k-nav-pill:#2C2C2A;
+
+  /* Borders */
+  --color-k-border:        #E8E4DC;
+  --color-k-border-subtle: #F3F0EA;
+
+  /* Text */
+  --color-k-text:   #1A1A18;
+  --color-k-text-2: #5F5E5A;
+  --color-k-muted:  #B4B2A9;
+  --color-k-on-dark:#F7F4EF;
+  --color-k-dim:    #5F5E5A;
+
+  /* Accents */
+  --color-k-amber:  #EF9F27;
+  --color-k-purple: #AFA9EC;
+  --color-k-teal:   #5DCAA5;
+  --color-k-pink:   #ED93B1;
+
+  /* Agent */
+  --color-k-agent-bg:   #EEEDFE;
+  --color-k-agent-text: #3C3489;
+
+  /* Pill tokens */
+  --color-k-pill-amber-bg:  #FAC775;
+  --color-k-pill-amber-text:#633806;
+  --color-k-pill-coral-bg:  #F5C4B3;
+  --color-k-pill-coral-text:#712B13;
+  --color-k-pill-muted-bg:  #EDE9E2;
+  --color-k-pill-muted-text:#5F5E5A;
+  --color-k-pill-lila-bg:   #EEEDFE;
+  --color-k-pill-lila-text: #534AB7;
+  --color-k-pill-us-bg:     #FBEAF0;
+  --color-k-pill-us-text:   #993556;
+}
+
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
   body {
     font-family: 'Inter', sans-serif;
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: var(--color-k-base);
+    color: var(--color-k-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
   }
-  #root {
-    min-height: 100svh;
-  }
+  #root { min-height: 100svh; }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { format } from 'date-fns'
 import { Modal } from '../../components/ui/Modal'
@@ -12,6 +12,10 @@ interface AddTaskModalProps {
   onClose: () => void
   familyId: string | null
   onSaved: () => void
+  /** Pre-fill fields from natural-language parsing */
+  defaultTitle?: string
+  defaultDate?: string
+  defaultTag?: TaskTag | ''
 }
 
 interface FormData {
@@ -22,12 +26,27 @@ interface FormData {
 
 const TAGS: TaskTag[] = ['kid', 'home', 'occasion', 'shopping', 'urgent', 'other']
 
-export function AddTaskModal({ open, onClose, familyId, onSaved }: AddTaskModalProps) {
+export function AddTaskModal({ open, onClose, familyId, onSaved, defaultTitle, defaultDate, defaultTag }: AddTaskModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: { due_date: format(new Date(), 'yyyy-MM-dd'), tag: '' }
   })
+
+  // Re-populate form on open. Use a ref to avoid dynamic dep-array size issues with RHF.
+  const defaultsRef = useRef({ defaultTitle, defaultDate, defaultTag })
+  defaultsRef.current = { defaultTitle, defaultDate, defaultTag }
+
+  useEffect(() => {
+    if (!open) return
+    const { defaultTitle: t, defaultDate: d, defaultTag: tag } = defaultsRef.current
+    reset({
+      title: t ?? '',
+      due_date: d ?? format(new Date(), 'yyyy-MM-dd'),
+      tag: tag ?? '',
+    })
+    setError(null)
+  }, [open, reset])
 
   async function onSubmit(data: FormData) {
     if (!familyId) return

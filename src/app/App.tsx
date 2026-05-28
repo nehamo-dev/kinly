@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
-import { getDemoState, clearDemoState, DEMO_FAMILY_ID } from '../lib/demoLocal'
+// demoLocal kept for legacy localStorage cleanup (called from DemoBanner)
 
 import { TopNav } from '../components/layout/TopNav'
 import { DemoBanner } from '../components/layout/DemoBanner'
@@ -12,8 +12,10 @@ import { DemoBanner } from '../components/layout/DemoBanner'
 import { Welcome } from '../features/onboarding/Welcome'
 import { Onboarding } from '../features/onboarding/Onboarding'
 import { Home } from '../features/home/Home'
+import { Family } from '../features/family/Family'
 import { ShellScreen } from '../features/home/ShellScreen'
 import { CalendarSettings } from '../features/calendar/CalendarSettings'
+import { CalendarScreen } from '../features/calendar/CalendarScreen'
 import { AuthCallback } from '../features/calendar/AuthCallback'
 
 const queryClient = new QueryClient()
@@ -45,27 +47,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     let done = false
     const markReady = () => { if (!done) { done = true; setReady(true) } }
 
-    // ── Fast path A: local demo mode ───────────────────────────────────────
-    const demo = getDemoState()
-    if (demo?.familyId) {
-      setFamilyId(demo.familyId)
-      setIsDemo(true)
-      markReady()
-
-      // Watch for real sign-in so we can swap out of demo
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (session?.user && !session.user.is_anonymous) {
-          clearDemoState()
-          setSession(session)
-          setIsDemo(false)
-          setFamilyId(null)
-          await loadFamilyId(session.user.id).catch(() => {})
-        }
-      })
-      return () => subscription.unsubscribe()
-    }
-
-    // ── Fast path B: cached familyId for real sessions ────────────────────
+    // ── Fast path: cached familyId for instant restore ───────────────────
     // getSession() reads the JWT from localStorage (no network if token is
     // still valid). If we also have a cached familyId we can call markReady()
     // immediately and let loadFamilyId() validate in the background.
@@ -151,10 +133,6 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const session = useAuthStore((s) => s.session)
   const familyId = useAuthStore((s) => s.familyId)
-  const isDemo = useAuthStore((s) => s.isDemo)
-
-  // Local demo mode — no real session needed
-  if (isDemo && familyId === DEMO_FAMILY_ID) return <>{children}</>
 
   if (session === null) return <Navigate to="/welcome" replace />
   // Anonymous users with no family → Welcome to start fresh
@@ -197,7 +175,7 @@ export function App() {
             <Route path="/family" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <ShellScreen title="Family" subtitle="Manage your household members and activities" />
+                  <Family />
                 </AppLayout>
               </ProtectedRoute>
             } />
@@ -205,7 +183,7 @@ export function App() {
             <Route path="/calendar" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <ShellScreen title="Calendar" subtitle="Your family's full schedule at a glance" />
+                  <CalendarScreen />
                 </AppLayout>
               </ProtectedRoute>
             } />

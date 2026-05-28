@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { format } from 'date-fns'
 import { Modal } from '../../components/ui/Modal'
@@ -11,6 +11,12 @@ interface AddEventModalProps {
   onClose: () => void
   familyId: string | null
   onSaved: () => void
+  /** Pre-fill the date field (yyyy-MM-dd). Defaults to today. */
+  defaultDate?: string
+  /** Pre-fill the title from natural-language parsing. */
+  defaultTitle?: string
+  /** Pre-fill the time field (HH:mm) from natural-language parsing. */
+  defaultTime?: string
 }
 
 interface FormData {
@@ -19,12 +25,27 @@ interface FormData {
   time_start: string
 }
 
-export function AddEventModal({ open, onClose, familyId, onSaved }: AddEventModalProps) {
+export function AddEventModal({ open, onClose, familyId, onSaved, defaultDate, defaultTitle, defaultTime }: AddEventModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
-    defaultValues: { date: format(new Date(), 'yyyy-MM-dd') }
+    defaultValues: { date: defaultDate ?? format(new Date(), 'yyyy-MM-dd') }
   })
+
+  // Re-populate the form on open. Use a ref to avoid dynamic dep-array size issues with RHF.
+  const defaultsRef = useRef({ defaultTitle, defaultDate, defaultTime })
+  defaultsRef.current = { defaultTitle, defaultDate, defaultTime }
+
+  useEffect(() => {
+    if (!open) return
+    const { defaultTitle: t, defaultDate: d, defaultTime: time } = defaultsRef.current
+    reset({
+      title: t ?? '',
+      date: d ?? format(new Date(), 'yyyy-MM-dd'),
+      time_start: time ?? '',
+    })
+    setError(null)
+  }, [open, reset])
 
   async function onSubmit(data: FormData) {
     if (!familyId) return

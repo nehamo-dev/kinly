@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { supabase } from '../../lib/supabase'
 import { clearDemoState } from '../../lib/demoLocal'
 
 export function DemoBanner() {
@@ -11,24 +12,32 @@ export function DemoBanner() {
   if (!isDemo || dismissed) return null
 
   return (
-    <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5">
-      <div className="max-w-[860px] mx-auto flex items-center justify-between gap-4">
-        <p className="text-sm text-amber-800">
-          <span className="font-medium">You're in demo mode.</span>{' '}
-          Your data resets after 24 hours.{' '}
+    <div style={{ background: '#2C2C2A', borderBottom: '1px solid #3a3a38' }} className="px-4 py-2">
+      <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-4">
+        <p className="text-xs" style={{ color: '#888780' }}>
+          <span style={{ color: '#B4B2A9' }}>Demo mode.</span>{' '}
+          Data resets after 24 hours.{' '}
           <button
-            className="underline font-medium hover:text-amber-900"
-            onClick={() => { clearDemoState(); navigate('/welcome') }}
+            className="underline hover:opacity-80 transition-opacity"
+            style={{ color: '#EF9F27' }}
+            onClick={() => {
+              clearDemoState()
+              // Sign out of the anonymous Supabase session and clear family cache
+              supabase.auth.signOut().catch(() => {})
+              try { localStorage.removeItem('kinly-family-id') } catch {}
+              navigate('/welcome')
+            }}
           >
             Sign up to save your data →
           </button>
         </p>
         <button
-          className="text-amber-600 hover:text-amber-800 flex-shrink-0"
+          className="flex-shrink-0 hover:opacity-70 transition-opacity"
+          style={{ color: '#5F5E5A' }}
           onClick={() => setDismissed(true)}
           aria-label="Dismiss demo banner"
         >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M2 2l12 12M14 2L2 14" />
           </svg>
         </button>
