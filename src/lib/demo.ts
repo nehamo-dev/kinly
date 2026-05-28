@@ -8,6 +8,10 @@ import type {
 const TODAY = new Date()
 const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
 
+// ── Shared demo family — pre-seeded once in Supabase, never re-created ────────
+// All demo users read this family directly. No seeding on demo button click.
+export const DEMO_FAMILY_ID = '00000000-0000-4000-a000-000000000001'
+
 // ─── Static demo flagged emails ───────────────────────────────────────────────
 export const DEMO_EMAILS: DemoFlaggedEmail[] = [
   {

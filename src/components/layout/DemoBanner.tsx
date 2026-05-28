@@ -22,9 +22,12 @@ export function DemoBanner() {
             style={{ color: '#EF9F27' }}
             onClick={() => {
               clearDemoState()
-              // Sign out of the anonymous Supabase session and clear family cache
-              supabase.auth.signOut().catch(() => {})
               try { localStorage.removeItem('kinly-family-id') } catch {}
+              // Only sign out if there's actually a Supabase session to clear
+              if (useAuthStore.getState().session) {
+                supabase.auth.signOut().catch(() => {})
+              }
+              useAuthStore.getState().clear()
               navigate('/welcome')
             }}
           >

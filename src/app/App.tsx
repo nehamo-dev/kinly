@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
+import { DEMO_FAMILY_ID } from '../lib/demo'
 // demoLocal kept for legacy localStorage cleanup (called from DemoBanner)
 
 import { TopNav } from '../components/layout/TopNav'
@@ -57,6 +58,16 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         return `sb-${ref}-auth-token`
       } catch { return null }
     })()
+
+    // ── Fast path: shared demo family (no session, no Supabase needed) ──────
+    // Demo users aren't signed in — they just read the pre-seeded family.
+    // Skip all network calls and mark ready immediately.
+    if (cachedFamilyId === DEMO_FAMILY_ID) {
+      setFamilyId(DEMO_FAMILY_ID)
+      setIsDemo(true)
+      markReady()
+      return
+    }
 
     // ── Stale anonymous session cleanup ──────────────────────────────────
     // When a demo user's anonymous JWT has expired, the Supabase SDK will try
@@ -187,9 +198,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const session = useAuthStore((s) => s.session)
+  const session  = useAuthStore((s) => s.session)
   const familyId = useAuthStore((s) => s.familyId)
+  const isDemo   = useAuthStore((s) => s.isDemo)
 
+  // Demo users have no Supabase session — bypass all auth checks
+  if (isDemo && familyId) return <>{children}</>
   if (session === null) return <Navigate to="/welcome" replace />
   // Anonymous users with no family → Welcome to start fresh
   if (session && !familyId && session.user?.is_anonymous) return <Navigate to="/welcome" replace />

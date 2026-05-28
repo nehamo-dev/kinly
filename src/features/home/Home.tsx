@@ -116,23 +116,23 @@ export function Home() {
     setScheduleLoading(true)
     void (async () => {
       try {
+        // Demo family events/occasions are seeded at a fixed date — skip date
+        // filters so they always appear regardless of when the demo is viewed.
+        const eventsQuery = isDemo
+          ? supabase.from('events').select('*').eq('family_id', familyId)
+          : supabase.from('events').select('*').eq('family_id', familyId).eq('date', today)
+
+        const occasionsQuery = isDemo
+          ? supabase.from('occasions').select('*').eq('family_id', familyId).order('date', { ascending: true }).limit(3)
+          : supabase.from('occasions').select('*').eq('family_id', familyId).gte('date', today).order('date', { ascending: true }).limit(3)
+
         const [eventsRes, membersRes, occasionsRes] = await Promise.all([
-          supabase
-            .from('events')
-            .select('*')
-            .eq('family_id', familyId)
-            .eq('date', today),
+          eventsQuery,
           supabase
             .from('members')
             .select('*')
             .eq('family_id', familyId),
-          supabase
-            .from('occasions')
-            .select('*')
-            .eq('family_id', familyId)
-            .gte('date', today)
-            .order('date', { ascending: true })
-            .limit(3),
+          occasionsQuery,
         ])
         setEvents((eventsRes.data     as FamilyEvent[]) || [])
         setMembers((membersRes.data   as Member[])      || [])

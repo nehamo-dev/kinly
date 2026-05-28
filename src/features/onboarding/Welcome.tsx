@@ -3,26 +3,21 @@ import { IconSend, IconSparkles } from '@tabler/icons-react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { useNavigate } from 'react-router-dom'
-import { seedDemoFamily } from '../../lib/demo'
+import { DEMO_FAMILY_ID } from '../../lib/demo'
 
 // ── Welcome — two-column sign-in page ─────────────────────────────────────────
 // Left:  dark brand panel (#1A1A18) — logo · tagline · trust badge
 // Right: warm form panel (#F7F4EF) — Google · email · magic link · demo
 
 export function Welcome() {
-  const [email,       setEmail]       = useState('')
-  const [loading,     setLoading]     = useState(false)
-  const [demoLoading, setDemoLoading] = useState(false)
-  const [demoStatus,  setDemoStatus]  = useState<string | null>(null)
-  const [error,       setError]       = useState<string | null>(null)
-  const [sent,        setSent]        = useState(false)
+  const [email,   setEmail]   = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
+  const [sent,    setSent]    = useState(false)
 
   const navigate    = useNavigate()
   const setFamilyId = useAuthStore((s) => s.setFamilyId)
   const setIsDemo   = useAuthStore((s) => s.setIsDemo)
-  // Read current auth state — AuthProvider may have already restored a session
-  const storeSession  = useAuthStore((s) => s.session)
-  const storeFamilyId = useAuthStore((s) => s.familyId)
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -52,86 +47,12 @@ export function Welcome() {
     if (ssoErr) setError(ssoErr.message)
   }
 
-  async function handleDemoMode() {
-    setDemoLoading(true)
-    setDemoStatus('Starting demo…')
-    setError(null)
-
-    // ── Tier 1: zero-network fast path ───────────────────────────────────────
-    // AuthProvider restores the session from localStorage on every page load.
-    // If it already found a valid anonymous session + family, just navigate.
-    if (storeSession?.user?.is_anonymous && storeFamilyId) {
-      setIsDemo(true)
-      navigate('/')
-      return
-    }
-
-    const slowTimer = setTimeout(() => setDemoStatus('Server waking up (~30 s on first load)…'), 5000)
-
-    try {
-      await Promise.race([
-        (async () => {
-          // ── Tier 2: existing anonymous user, find their family ────────────
-          // signInAnonymously() is rate-limited per IP. If we already have a
-          // session (but AuthProvider didn't find a family), look it up first.
-          let userId: string | null = storeSession?.user?.id ?? null
-
-          if (!userId) {
-            // Try a quick getSession() — 3 s cap so we don't hang here
-            type SR = Awaited<ReturnType<typeof supabase.auth.getSession>>
-            const { data: { session } } = await Promise.race<SR>([
-              supabase.auth.getSession(),
-              new Promise<SR>((r) => setTimeout(() => r({ data: { session: null }, error: null }), 3000)),
-            ])
-            if (session?.user?.is_anonymous) userId = session.user.id
-          }
-
-          if (userId) {
-            const { data: uf } = await supabase
-              .from('user_families')
-              .select('family_id')
-              .eq('user_id', userId)
-              .limit(1)
-              .maybeSingle()
-            if (uf?.family_id) {
-              // Found an existing demo family — reuse it, no seed needed
-              try { localStorage.setItem('kinly-family-id', uf.family_id) } catch {}
-              setFamilyId(uf.family_id)
-              setIsDemo(true)
-              navigate('/')
-              return
-            }
-          }
-
-          // ── Tier 3: create new anonymous user and seed ────────────────────
-          if (!userId) {
-            const { data, error: authErr } = await supabase.auth.signInAnonymously()
-            if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
-            userId = data.user.id
-          }
-
-          setDemoStatus('Building your family…')
-          const familyId = await seedDemoFamily(userId)
-          try { localStorage.setItem('kinly-family-id', familyId) } catch {}
-          setFamilyId(familyId)
-          setIsDemo(true)
-          navigate('/')
-        })(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('TIMEOUT')), 45000)
-        ),
-      ])
-    } catch (err) {
-      const msg = (err as Error)?.message ?? ''
-      console.error('[Kinly] Demo setup failed:', err)
-      setError(msg === 'TIMEOUT'
-        ? 'Server timed out. Wait 30 s and try again.'
-        : `Demo setup failed: ${msg || 'unknown error'}`)
-      setDemoLoading(false)
-      setDemoStatus(null)
-    } finally {
-      clearTimeout(slowTimer)
-    }
+  function handleDemoMode() {
+    // Zero network calls — just point at the shared pre-seeded demo family.
+    try { localStorage.setItem('kinly-family-id', DEMO_FAMILY_ID) } catch {}
+    setFamilyId(DEMO_FAMILY_ID)
+    setIsDemo(true)
+    navigate('/')
   }
 
   return (
@@ -374,8 +295,7 @@ export function Welcome() {
           >
             <button
               onClick={handleDemoMode}
-              disabled={demoLoading}
-              className="flex items-center justify-center gap-2 w-full transition-opacity"
+              className="flex items-center justify-center gap-2 w-full transition-opacity hover:opacity-80"
               style={{
                 background: '#EEEDFE',
                 color: '#534AB7',
@@ -383,27 +303,12 @@ export function Welcome() {
                 padding: '11px 16px',
                 fontSize: 13,
                 fontWeight: 500,
-                cursor: demoLoading ? 'not-allowed' : 'pointer',
-                opacity: demoLoading ? 0.7 : 1,
+                cursor: 'pointer',
                 border: 'none',
               }}
             >
-              {demoLoading ? (
-                <span
-                  className="rounded-full animate-spin"
-                  style={{
-                    width: 12,
-                    height: 12,
-                    border: '2px solid #534AB7',
-                    borderTopColor: 'transparent',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <IconSparkles size={14} />
-              )}
-              {demoLoading ? (demoStatus ?? 'Starting demo…') : "See it with a real family's week"}
+              <IconSparkles size={14} />
+              See it with a real family's week
             </button>
             <p
               className="text-center"

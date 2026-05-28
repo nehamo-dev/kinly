@@ -46,6 +46,9 @@ Last updated: 2026-05-28
 - [x] Production deploy — `https://kinly-six.vercel.app` live, `GROQ_API_KEY` set in Vercel dashboard
 - [x] Demo mode fix — `user_families` insert error was silently swallowed; fixed error propagation in `demo.ts`
 - [x] `loadFamilyId` — switched `.single()` → `.maybeSingle()` to avoid 406 on 0 rows
+- [x] TopNav logo — removed stale SVG KinlyLogo; replaced with wordmark + amber dot matching Welcome.tsx
+- [x] RLS — enabled on `families` + `user_families`; added INSERT policy on `families`
+- [x] Demo mode rearchitected — shared pre-seeded family (UUID `00000000-0000-4000-a000-000000000001`); demo button is instant (zero network); no anonymous auth, no seeding on click; events/occasions fetched without date filter in demo mode
 
 ---
 
@@ -77,7 +80,7 @@ Last updated: 2026-05-28
 
 ### Infrastructure
 - [ ] Google OAuth — fill `VITE_GOOGLE_CLIENT_ID` + `VITE_GOOGLE_CLIENT_SECRET` for calendar sync (skipped for now)
-- [ ] Supabase RLS — add explicit INSERT policy on `families` table (currently relies on default grants; low risk but should be locked down before production)
+- [ ] Supabase RLS — audit remaining tables (members, activities, etc.) for missing policies
 - [ ] Rate limiting on `/api/kinly` — no rate limiting currently; open to abuse in production
 
 ---
