@@ -16,10 +16,21 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-40 bg-k-nav w-full" style={{ height: '52px' }}>
       <div className="max-w-[1200px] mx-auto px-6 h-full flex items-center gap-6">
-        {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-2 flex-shrink-0">
-          <KinlyLogo />
-          <span className="text-[15px] font-semibold tracking-tight text-k-on-dark">kinly</span>
+        {/* Logo — wordmark + amber dot */}
+        <NavLink to="/" className="flex-shrink-0" aria-label="Kinly home">
+          <span style={{ fontSize: 18, fontWeight: 500, color: '#F7F4EF', letterSpacing: '-0.4px', lineHeight: 1 }}>
+            kinly
+            <span style={{
+              display: 'inline-block',
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#EF9F27',
+              verticalAlign: 'middle',
+              marginLeft: 2,
+              marginBottom: 2,
+            }} />
+          </span>
         </NavLink>
 
         {/* Nav links */}
@@ -65,16 +76,6 @@ export function TopNav() {
   )
 }
 
-function KinlyLogo() {
-  return (
-    <svg width="24" height="22" viewBox="0 0 60 54" fill="none" className="flex-shrink-0">
-      <circle cx="30" cy="10" r="6" fill="#EF9F27" />
-      <circle cx="14" cy="26" r="6" fill="#EF9F27" />
-      <circle cx="46" cy="26" r="6" fill="#EF9F27" />
-      <path d="M8 38 Q30 56 52 38" stroke="#EF9F27" strokeWidth="5.5" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
 
 function getInitials(name: string): string {
   const parts = name.split(/[\s@.]+/).filter(Boolean)

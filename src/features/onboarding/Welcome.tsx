@@ -13,6 +13,7 @@ export function Welcome() {
   const [email,       setEmail]       = useState('')
   const [loading,     setLoading]     = useState(false)
   const [demoLoading, setDemoLoading] = useState(false)
+  const [demoStatus,  setDemoStatus]  = useState<string | null>(null)
   const [error,       setError]       = useState<string | null>(null)
   const [sent,        setSent]        = useState(false)
 
@@ -50,22 +51,51 @@ export function Welcome() {
 
   async function handleDemoMode() {
     setDemoLoading(true)
+    setDemoStatus('Starting demo…')
     setError(null)
+
+    // Show a "warming up" note after 4 s so the user knows we're not frozen
+    const slowTimer = setTimeout(() => setDemoStatus('Warming up — just a moment…'), 4000)
+
+    // Hard timeout: fail after 25 s rather than hang forever
+    let timedOut = false
+    const timeoutId = setTimeout(() => { timedOut = true }, 25000)
+
     try {
-      const { data, error: authErr } = await supabase.auth.signInAnonymously()
-      if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
+      const raceResult = await Promise.race([
+        (async () => {
+          const { data, error: authErr } = await supabase.auth.signInAnonymously()
+          if (authErr || !data.user) throw authErr || new Error('Sign-in failed')
 
-      const familyId = await seedDemoFamily(data.user.id)
+          setDemoStatus('Building your family…')
+          const familyId = await seedDemoFamily(data.user.id)
 
-      try { localStorage.setItem('kinly-family-id', familyId) } catch {}
+          try { localStorage.setItem('kinly-family-id', familyId) } catch {}
+          setFamilyId(familyId)
+          setIsDemo(true)
+          return familyId
+        })(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+        ),
+      ])
 
-      setFamilyId(familyId)
-      setIsDemo(true)
-      navigate('/')
+      // Only navigate if we didn't already time out
+      if (!timedOut && raceResult) navigate('/')
+
     } catch (err) {
+      const msg = (err as Error)?.message ?? ''
       console.error('[Kinly] Demo setup failed:', err)
-      setError('Demo setup failed — please try again')
+      if (msg === 'TIMEOUT') {
+        setError('Setup is taking too long — Supabase may be waking up. Wait 10 s and try again.')
+      } else {
+        setError('Demo setup failed — please try again')
+      }
       setDemoLoading(false)
+      setDemoStatus(null)
+    } finally {
+      clearTimeout(slowTimer)
+      clearTimeout(timeoutId)
     }
   }
 
@@ -332,12 +362,13 @@ export function Welcome() {
                     border: '2px solid #534AB7',
                     borderTopColor: 'transparent',
                     display: 'inline-block',
+                    flexShrink: 0,
                   }}
                 />
               ) : (
                 <IconSparkles size={14} />
               )}
-              See it with a real family's week
+              {demoLoading ? (demoStatus ?? 'Starting demo…') : "See it with a real family's week"}
             </button>
             <p
               className="text-center"
