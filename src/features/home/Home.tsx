@@ -101,11 +101,13 @@ export function Home() {
     setTasksLoading(true)
     void (async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('tasks')
           .select('*')
           .eq('family_id', familyId)
           .eq('done', false)
+        if (error) console.error('[Kinly] tasks error:', error)
+        console.log('[Kinly] tasks:', data?.length ?? 0, 'rows', { familyId })
         setTasks((data as Task[]) || [])
       } finally {
         setTasksLoading(false)
@@ -134,6 +136,10 @@ export function Home() {
             .eq('family_id', familyId),
           occasionsQuery,
         ])
+        if (eventsRes.error)   console.error('[Kinly] events error:',   eventsRes.error)
+        if (membersRes.error)  console.error('[Kinly] members error:',  membersRes.error)
+        if (occasionsRes.error) console.error('[Kinly] occasions error:', occasionsRes.error)
+        console.log('[Kinly] events:', eventsRes.data?.length ?? 0, 'members:', membersRes.data?.length ?? 0, 'occasions:', occasionsRes.data?.length ?? 0)
         setEvents((eventsRes.data     as FamilyEvent[]) || [])
         setMembers((membersRes.data   as Member[])      || [])
         setOccasions((occasionsRes.data as Occasion[])  || [])
