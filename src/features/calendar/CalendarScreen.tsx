@@ -431,7 +431,7 @@ function KinlyDock({ members, events }: DockProps) {
   }
 
   return (
-    <div style={{ background: '#1A1A18', borderTop: '0.5px solid #2C2C2A', padding: '14px 28px 16px', flexShrink: 0 }}>
+    <div style={{ background: '#1A1A18', borderBottom: '0.5px solid #2C2C2A', padding: '14px 28px 16px', flexShrink: 0 }}>
       <div style={{ maxWidth: 720 }}>
         <div
           style={{
@@ -583,7 +583,10 @@ export function CalendarScreen() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 52px)', overflow: 'hidden' }}>
 
-      {/* Dark header */}
+      {/* Kinly input — above the week strip */}
+      <KinlyDock members={members} events={allEvents} />
+
+      {/* Dark week strip */}
       <CalendarHeader
         selectedDate={selectedDate}
         weekDaysList={days}
@@ -601,7 +604,7 @@ export function CalendarScreen() {
         <div
           ref={listRef}
           onScroll={handleScroll}
-          style={{ overflowY: 'auto', padding: '22px 28px 120px', borderRight: '0.5px solid #E8E4DC', background: '#FFFFFF' }}
+          style={{ overflowY: 'auto', padding: '22px 28px 40px', borderRight: '0.5px solid #E8E4DC', background: '#FFFFFF' }}
         >
           {loading ? (
             <div className="flex flex-col gap-3">
@@ -643,8 +646,6 @@ export function CalendarScreen() {
         />
       </div>
 
-      {/* KinlyDock */}
-      <KinlyDock members={members} events={allEvents} />
     </div>
   )
 }
