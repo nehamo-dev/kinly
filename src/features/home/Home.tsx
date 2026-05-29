@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { format, isBefore, isToday, parseISO } from 'date-fns'
 import { IconCar, IconMusic, IconHeart, IconCalendar, IconSchool, IconUsers } from '@tabler/icons-react'
 import { KinlyBar } from '../../components/shared/KinlyBar'
 import { ActionCard } from './ActionCard'
 import { ScheduleCard, ScheduleStrip } from './ScheduleCard'
-import { KinlyPanel } from './KinlyPanel'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
 import { syncCalendarEvents } from '../../lib/google'
@@ -204,7 +203,7 @@ export function Home() {
   const taskCount    = pending.length
   const chips        = events.slice(0, 4)
 
-  const [activeQuery, setActiveQuery] = useState<string | null>(null)
+  const kinlyPrefillRef = useRef<((text: string) => void) | null>(null)
 
   function buildCard(task: Task) {
     const agentLine = isDemo ? DEMO_AGENT_MAP[task.title] : undefined
@@ -220,7 +219,7 @@ export function Home() {
         agentLine={agentLine}
         agentAction={agentLine ? { label: agentLine, onClick: () => {
           const q = DEMO_ACTION_QUERY[task.title]
-          if (q) setActiveQuery(q)
+          if (q) kinlyPrefillRef.current?.(q)
         }} : undefined}
       />
     )
@@ -238,21 +237,9 @@ export function Home() {
           pendingTaskCount: taskCount,
         }}
         members={members}
+        prefillRef={kinlyPrefillRef}
         onActionExecuted={() => loadData()}
       />
-
-      {/* KinlyPanel overlay */}
-      {activeQuery && (
-        <KinlyPanel
-          query={activeQuery}
-          context={{
-            memberNames:      members.map((m) => m.name.split(' ')[0]),
-            todayEvents:      events.map((e) => ({ title: e.title, time: e.time_start })),
-            pendingTaskCount: taskCount,
-          }}
-          onClose={() => setActiveQuery(null)}
-        />
-      )}
 
       {/* ── Greeting + chips ──────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 20px 0' }}>
