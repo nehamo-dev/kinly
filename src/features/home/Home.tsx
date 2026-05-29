@@ -227,7 +227,7 @@ export function Home() {
   }
 
   return (
-    <div style={{ background: '#F7F4EF', minHeight: 'calc(100vh - 52px)', paddingBottom: 64 }}>
+    <div style={{ background: '#ffffff', minHeight: 'calc(100vh - 52px)', paddingBottom: 64 }}>
 
       {/* KinlyBar */}
       <KinlyBar
