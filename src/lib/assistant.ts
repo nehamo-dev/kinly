@@ -22,6 +22,8 @@ export interface AssistantContext {
   memberNames?: string[]
   todayEvents?: Array<{ title: string; time: string | null }>
   pendingTaskCount?: number
+  /** Extra text appended to the system prompt (e.g. action format instructions) */
+  systemSuffix?: string
 }
 
 export type Message = { role: 'user' | 'assistant'; content: string }
@@ -47,6 +49,7 @@ function buildSystemContent(context: AssistantContext): string {
   }
   if (context.pendingTaskCount !== undefined) ctx.push(`Pending tasks: ${context.pendingTaskCount}`)
   if (ctx.length) lines.push(`\nCurrent context: ${ctx.join(' | ')}`)
+  if (context.systemSuffix) lines.push(context.systemSuffix)
   return lines.join('\n')
 }
 

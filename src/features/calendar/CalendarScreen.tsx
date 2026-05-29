@@ -471,6 +471,8 @@ export function CalendarScreen() {
             .filter((e) => e.date === toStr(new Date()))
             .map((e) => ({ title: e.title, time: e.time_start })),
         }}
+        members={members}
+        onActionExecuted={() => { void loadData() }}
       />
 
       {/* Dark week strip */}

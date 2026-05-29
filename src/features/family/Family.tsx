@@ -571,6 +571,7 @@ export function Family() {
         onBeforeQuery={handleKinlyMessage}
         onMountFocus={(fn) => { kinlyFocusRef.current = fn }}
         prefillRef={kinlyPrefillRef}
+        onActionExecuted={() => { void loadMembers() }}
       />
 
       {/* Page header */}

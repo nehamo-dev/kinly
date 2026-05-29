@@ -363,6 +363,7 @@ export function HomeScreen() {
         page="home"
         context={{ memberNames: [] }}
         prefillRef={kinlyPrefillRef}
+        onActionExecuted={() => { void loadData() }}
       />
 
       {/* Page header */}
