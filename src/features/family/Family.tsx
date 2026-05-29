@@ -560,10 +560,10 @@ export function Family() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: 'calc(100vh - 52px)',
-        background: '#F7F4EF',
+        background: '#ffffff',
       }}
     >
-      {/* KinlyBar — above all content */}
+      {/* KinlyBar — full-width dark banner */}
       <KinlyBar
         page="family"
         context={{ memberNames: members.map((m) => m.name.split(' ')[0]) }}
@@ -574,28 +574,31 @@ export function Family() {
         onActionExecuted={() => { void loadMembers() }}
       />
 
-      {/* Page header */}
-      <div style={{ padding: '22px 28px 0' }}>
+      {/* Centered content */}
+      <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', padding: '22px 20px 0' }}>
+        {/* Page header */}
         <h1
           style={{
-            fontSize: 18,
-            fontWeight: 500,
-            color: '#1A1A18',
-            letterSpacing: '-0.3px',
+            fontFamily: 'Lora, serif',
+            fontSize: 22,
+            fontWeight: 400,
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.25,
             margin: 0,
           }}
         >
-          Your family
+          Your family.
         </h1>
         <p
           style={{
             fontSize: 12,
-            color: '#B4B2A9',
-            marginTop: 3,
+            color: '#b0b0b0',
+            marginTop: 4,
             marginBottom: 20,
           }}
         >
-          Tell Kinly about anyone — it fills in the details.
+          Tell Kinly about anyone — names, ages, schools, jobs. No forms.
         </p>
       </div>
 
@@ -603,7 +606,10 @@ export function Family() {
       <div
         ref={rosterRef}
         style={{
-          padding: '16px 28px 28px',
+          maxWidth: 760,
+          margin: '0 auto',
+          width: '100%',
+          padding: '0 20px 40px',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
           gap: 12,
