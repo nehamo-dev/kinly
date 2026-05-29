@@ -24,13 +24,13 @@ import type { Member } from '../../types'
 
 const PLACEHOLDERS: Record<KinlyBarPage, string[]> = {
   today: [
+    "Ask Kinly anything — schedule Lila's dentist, text the babysitter...",
     "Is Lila free this Saturday?",
     "Reschedule Maria's cleaning...",
     "What's on this weekend?",
     "Remind me before piano today...",
     "Move morning sync to 9:30...",
     "What does tomorrow look like?",
-    "Add a note about Lila's recital...",
   ],
   calendar: [
     "Add Lila's soccer game Sunday 10am...",
@@ -401,37 +401,44 @@ export function KinlyBar({
     <div
       ref={wrapRef}
       style={{
-        background:   '#F7F4EF',
-        padding:      '10px 28px',
-        borderBottom: '0.5px solid #E8E4DC',
+        background:   '#1A1A18',
+        padding:      open ? '10px 28px' : '11px 28px',
+        borderBottom: '0.5px solid #2C2C2A',
         flexShrink:   0,
         position:     'relative',
         zIndex:       30,
       }}
     >
-      <div className={`kinly-ring${open ? ' ring-focused' : ''}`}>
 
         {/* ── Collapsed ─────────────────────────────────────────────────── */}
         {!open && (
           <div
             style={{
-              background:  '#ffffff',
-              borderRadius: 11.5,
-              padding:     '10px 13px',
-              display:     'flex',
-              alignItems:  'center',
-              gap:          8,
-              cursor:      'text',
+              display:      'flex',
+              alignItems:   'center',
+              gap:           8,
+              background:   'rgba(255,255,255,0.08)',
+              border:       '0.5px solid rgba(255,255,255,0.14)',
+              borderRadius:  8,
+              padding:      '8px 12px',
+              cursor:       'text',
             }}
             onClick={openBar}
           >
-            <IconSparkles size={14} color="#AFA9EC" style={{ flexShrink: 0 }} />
+            {/* Amber circle with sparkle */}
+            <div style={{
+              width: 18, height: 18, borderRadius: '50%',
+              background: '#E8A44A',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <IconSparkles size={10} color="#fff" />
+            </div>
             <span
               style={{
                 flex:       1,
                 fontSize:   12,
-                fontStyle:  'italic',
-                color:      '#B4B2A9',
+                color:      'rgba(255,255,255,0.38)',
                 transition: 'opacity 300ms',
                 opacity:     promptVis ? 1 : 0,
                 userSelect: 'none',
@@ -439,28 +446,15 @@ export function KinlyBar({
             >
               {placeholders[promptIdx]}
             </span>
-            <span
-              style={{
-                fontSize:     9,
-                color:        '#C4C2BA',
-                background:   '#F3F1EC',
-                border:       '0.5px solid #D3D1C7',
-                borderRadius:  3,
-                padding:      '2px 5px',
-                flexShrink:    0,
-              }}
-            >
-              ⌘K
-            </span>
             {/* Mic — visible in collapsed state */}
             <button
               onClick={handleMic}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 1px', lineHeight: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 0 }}
               title="Voice input"
             >
               <IconMicrophone
                 size={14}
-                color={voice.listening ? '#EF9F27' : '#C4C2BA'}
+                color={voice.listening ? '#E8A44A' : 'rgba(255,255,255,0.25)'}
                 style={{ flexShrink: 0 }}
                 className={voice.listening ? 'animate-pulse' : ''}
               />
@@ -470,6 +464,7 @@ export function KinlyBar({
 
         {/* ── Expanded ──────────────────────────────────────────────────── */}
         {open && (
+          <div className="kinly-ring ring-focused">
           <div
             style={{
               background:  '#ffffff',
@@ -675,8 +670,8 @@ export function KinlyBar({
               </button>
             </form>
           </div>
+          </div>
         )}
-      </div>
 
       {/* Listening indicator below bar */}
       {voice.listening && (
