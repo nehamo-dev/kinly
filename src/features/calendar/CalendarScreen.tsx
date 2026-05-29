@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { format, addWeeks, subWeeks, startOfWeek, addDays, isToday, parseISO } from 'date-fns'
-import { IconSparkles, IconMicrophone, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { IconChevronLeft, IconChevronRight, IconSparkles } from '@tabler/icons-react'
+import { KinlyBar } from '../../components/shared/KinlyBar'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { streamKinly } from '../../lib/assistant'
 import type { FamilyEvent, Member, Occasion } from '../../types'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -17,16 +17,6 @@ const CAT: Record<Category, { dot: string; border: string; chipBg: string; chipT
   us:     { dot: '#ED93B1', border: '#ED93B1', chipBg: '#FBEAF0', chipText: '#993556' },
 }
 
-const DOCK_PROMPTS = [
-  'When is Lila free this weekend?',
-  'Move Saturday dinner to 7:30...',
-  'Add soccer practice every Thursday at 5pm...',
-  'What does next week look like?',
-  'Clear Thursday afternoon...',
-  'Is there anything on June 5?',
-  'Remind me about the recital next week...',
-  'Block Saturday morning for us...',
-]
 
 const DEMO_FOR_YOU = [
   { title: "Lila's all set to play",        subtitle: "Soccer form ready · closes Friday 5pm", agentLine: "one tap and it's done" },
@@ -373,117 +363,6 @@ function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
   )
 }
 
-// KinlyDock ───────────────────────────────────────────────────────────────────
-interface DockProps {
-  members: Member[]
-  events: FamilyEvent[]
-}
-
-function KinlyDock({ members, events }: DockProps) {
-  const [query,       setQuery]       = useState('')
-  const [reply,       setReply]       = useState('')
-  const [loading,     setLoading]     = useState(false)
-  const [focused,     setFocused]     = useState(false)
-  const [promptIdx,   setPromptIdx]   = useState(0)
-  const [promptFade,  setPromptFade]  = useState(true)
-  const abortRef = useRef<AbortController | null>(null)
-  const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Rotate placeholders every 2.6s
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPromptFade(false)
-      setTimeout(() => {
-        setPromptIdx((i) => (i + 1) % DOCK_PROMPTS.length)
-        setPromptFade(true)
-      }, 300)
-    }, 2600)
-    return () => clearInterval(id)
-  }, [])
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
-    if (!q || loading) return
-    setQuery('')
-    setLoading(true)
-    setReply('')
-    abortRef.current?.abort()
-    abortRef.current = new AbortController()
-    try {
-      let full = ''
-      await streamKinly(
-        [{ role: 'user', content: q }],
-        {
-          memberNames: members.map((m) => m.name.split(' ')[0]),
-          todayEvents: events.filter((e) => e.date === toStr(new Date())).map((e) => ({ title: e.title, time: e.time_start })),
-        },
-        (chunk) => { full += chunk; setReply(full) },
-        abortRef.current.signal,
-      )
-      if (replyTimer.current) clearTimeout(replyTimer.current)
-      replyTimer.current = setTimeout(() => setReply(''), 6000)
-    } catch {
-      // ignore abort
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div style={{ background: '#1A1A18', borderBottom: '0.5px solid #2C2C2A', padding: '14px 28px 16px', flexShrink: 0 }}>
-      <div style={{ maxWidth: 720 }}>
-        <div
-          style={{
-            background: '#ffffff',
-            border: focused ? '1px solid #AFA9EC' : '1px solid #E8E4DC',
-            borderRadius: 14,
-            padding: '5px 6px 6px',
-            transition: 'border-color 150ms',
-          }}
-        >
-          {/* Reply row */}
-          {(reply || loading) && (
-            <div className="flex items-start gap-2" style={{ padding: '8px 12px 6px', borderBottom: '0.5px solid #F3F0EA' }}>
-              <IconSparkles size={13} style={{ color: '#AFA9EC', flexShrink: 0, marginTop: 1 }} className={loading ? 'animate-pulse' : ''} />
-              <span style={{ fontSize: 12, color: '#5F5E5A', lineHeight: 1.5 }}>
-                {loading ? '…' : reply}
-              </span>
-            </div>
-          )}
-
-          {/* Input row */}
-          <form onSubmit={handleSubmit} className="flex items-center gap-2" style={{ padding: '7px 12px' }}>
-            <IconSparkles size={16} style={{ color: '#AFA9EC', flexShrink: 0 }} className={loading ? 'animate-pulse' : ''} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder={DOCK_PROMPTS[promptIdx]}
-              style={{
-                flex: 1,
-                background: 'none',
-                border: 'none',
-                outline: 'none',
-                fontSize: 12,
-                color: '#1A1A18',
-                fontStyle: query ? 'normal' : 'italic',
-                transition: 'opacity 300ms',
-                opacity: promptFade ? 1 : 0,
-              }}
-            />
-            <IconMicrophone size={16} style={{ color: '#C4C2BA', flexShrink: 0 }} />
-          </form>
-        </div>
-        <p style={{ fontSize: 11, color: '#444441', marginTop: 8, paddingLeft: 2 }}>
-          Your calendar, your way — just ask
-        </p>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function CalendarScreen() {
@@ -583,8 +462,16 @@ export function CalendarScreen() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 52px)', overflow: 'hidden' }}>
 
-      {/* Kinly input — above the week strip */}
-      <KinlyDock members={members} events={allEvents} />
+      {/* KinlyBar — above the week strip */}
+      <KinlyBar
+        page="calendar"
+        context={{
+          memberNames: members.map((m) => m.name.split(' ')[0]),
+          todayEvents: allEvents
+            .filter((e) => e.date === toStr(new Date()))
+            .map((e) => ({ title: e.title, time: e.time_start })),
+        }}
+      />
 
       {/* Dark week strip */}
       <CalendarHeader

@@ -1,450 +1,648 @@
+// ─── Family page ──────────────────────────────────────────────────────────────
+// Member roster grid driven by KinlyBar conversational input.
+// Spec: kinly-family-spec.md + kinly-bar-spec.md
+
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { differenceInDays, parseISO, isAfter, startOfDay, format } from 'date-fns'
-import { IconSparkles, IconCheck } from '@tabler/icons-react'
-import { PageWrapper } from '../../components/layout/PageWrapper'
-import { SectionHeader } from '../../components/ui/SectionHeader'
-import { Card } from '../../components/ui/Card'
-import { Avatar } from '../../components/ui/Avatar'
-import { Badge } from '../../components/ui/Badge'
+import { differenceInYears, parseISO, format } from 'date-fns'
+import {
+  IconDots,
+  IconSparkles,
+  IconSchool,
+  IconCake,
+} from '@tabler/icons-react'
+import { KinlyBar } from '../../components/shared/KinlyBar'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
-import { parseMember, memberConfirmText } from '../../lib/parseMember'
-import type { ParsedMember } from '../../lib/parseMember'
-import type { Member, Activity, Occasion, Provider } from '../../types'
+import { parseMember } from '../../lib/parseMember'
+import type { Member } from '../../types'
 
-// ─── Kinly add-member input ───────────────────────────────────────────────────
+// ── Role → colour mapping ─────────────────────────────────────────────────────
 
-interface AddMemberInputProps {
-  onAdd: (parsed: ParsedMember) => Promise<void>
+const ROLE_COLOR: Record<FamilyRole, string> = {
+  owner:       '#EF9F27',
+  partner:     '#5DCAA5',
+  child:       '#AFA9EC',
+  grandparent: '#ED93B1',
+  other:       '#ED93B1',
 }
 
-function AddMemberInput({ onAdd }: AddMemberInputProps) {
-  const [value,   setValue]   = useState('')
-  const [parsed,  setParsed]  = useState<ParsedMember | null>(null)
-  const [adding,  setAdding]  = useState(false)
-  const [success, setSuccess] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+const ROLE_LABEL: Record<FamilyRole, string> = {
+  owner:       'Account owner',
+  partner:     'Partner',
+  child:       'Child',
+  grandparent: 'Grandparent',
+  other:       'Family member',
+}
 
-  function handleSubmit() {
-    const trimmed = value.trim()
-    if (!trimmed || adding) return
-    setParsed(parseMember(trimmed))
+type FamilyRole = 'owner' | 'partner' | 'child' | 'grandparent' | 'other'
+
+// ── Local FamilyMember shape ──────────────────────────────────────────────────
+
+interface FamilyMember {
+  id: string
+  name: string
+  role: FamilyRole
+  color: string
+  initials: string
+  fields: { icon: React.ReactNode; value: string }[]
+  isNew?: boolean
+}
+
+// ── Map DB Member → FamilyMember ──────────────────────────────────────────────
+
+function toFamilyMember(m: Member, isFirst: boolean): FamilyMember {
+  const role: FamilyRole =
+    m.role === 'child'    ? 'child'
+    : isFirst             ? 'owner'
+    : m.role === 'parent' ? 'partner'
+    : 'other'
+
+  const color    = m.avatar_color ?? ROLE_COLOR[role]
+  const parts    = m.name.trim().split(/\s+/)
+  const initials = (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')
+
+  const fields: { icon: React.ReactNode; value: string }[] = []
+
+  if (m.school) {
+    fields.push({
+      icon: <IconSchool size={12} color="#C4C2BA" />,
+      value: m.grade ? `${m.school} · ${m.grade}` : m.school,
+    })
   }
 
-  async function handleConfirm() {
-    if (!parsed || adding) return
-    setAdding(true)
-    try {
-      await onAdd(parsed)
-      setSuccess(true)
-      setValue('')
-      setParsed(null)
-      setTimeout(() => setSuccess(false), 2000)
-    } finally {
-      setAdding(false)
+  if (m.date_of_birth) {
+    const age = differenceInYears(new Date(), parseISO(m.date_of_birth))
+    if (age > 0 && age < 120) {
+      fields.push({
+        icon: <IconCake size={12} color="#C4C2BA" />,
+        value: `${age} years old`,
+      })
     }
   }
 
-  function handleEdit() {
-    setParsed(null)
-    setTimeout(() => inputRef.current?.focus(), 50)
+  return {
+    id:       m.id,
+    name:     m.name,
+    role,
+    color,
+    initials: initials.toUpperCase(),
+    fields,
   }
+}
+
+// ── Extraction panel (shown inside Kinly bubble) ──────────────────────────────
+
+interface ExtractionData {
+  name?: string
+  role?: string
+  age?: string
+  school?: string
+  grade?: string
+  notes?: string
+}
+
+function ExtractionDisplay({ data }: { data: ExtractionData }) {
+  const rows = [
+    data.name   && { key: 'name',   val: data.name },
+    data.role   && { key: 'role',   val: data.role },
+    data.age    && { key: 'age',    val: data.age },
+    data.school && { key: 'school', val: data.school },
+    data.grade  && { key: 'grade',  val: data.grade },
+    data.notes  && { key: 'notes',  val: data.notes },
+  ].filter(Boolean) as { key: string; val: string }[]
+
+  if (!rows.length) return null
 
   return (
-    <div className="mb-6">
-      {/* Input bar */}
-      <div
-        className="flex items-center gap-2 rounded-[10px] px-3.5 py-2.5 cursor-text"
-        style={{ background: '#1A1A18' }}
-        onClick={() => inputRef.current?.focus()}
+    <div
+      style={{
+        background: '#EEEDFE',
+        borderRadius: 7,
+        padding: '8px 10px',
+        marginTop: 7,
+      }}
+    >
+      <p
+        style={{
+          fontSize: 9,
+          fontWeight: 500,
+          color: '#534AB7',
+          letterSpacing: '0.05em',
+          marginBottom: 5,
+          textTransform: 'uppercase',
+        }}
       >
-        <IconSparkles size={14} style={{ color: '#5F5E5A', flexShrink: 0 }} />
-        <input
-          ref={inputRef}
-          value={value}
-          onChange={(e) => { setValue(e.target.value); setParsed(null) }}
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-          placeholder="Tell Kinly about a family member..."
-          className="flex-1 bg-transparent text-[13px] focus:outline-none"
-          style={{ color: '#F7F4EF' }}
-        />
-        {value.trim() && !parsed && (
-          <button
-            onClick={handleSubmit}
-            className="text-[11px] font-medium px-2.5 py-1 rounded-[6px] flex-shrink-0 transition-opacity hover:opacity-80"
-            style={{ background: '#2C2C2A', color: '#888780' }}
+        Extracted
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {rows.map(({ key, val }) => (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              style={{
+                width: 3,
+                height: 3,
+                borderRadius: '50%',
+                background: '#AFA9EC',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: 10, color: '#8B82D4', minWidth: 52 }}>{key}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, color: '#3C3489' }}>{val}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Dots menu ─────────────────────────────────────────────────────────────────
+
+function DotsMenu({
+  name,
+  onEdit,
+  onRemove,
+}: {
+  name: string
+  onEdit: () => void
+  onRemove: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v) }}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '2px 4px',
+          lineHeight: 0,
+          borderRadius: 4,
+        }}
+      >
+        <IconDots size={15} color="#D3D1C7" />
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: 4,
+            background: '#fff',
+            border: '0.5px solid #E8E4DC',
+            borderRadius: 8,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            zIndex: 50,
+            minWidth: 130,
+            overflow: 'hidden',
+          }}
+        >
+          {[
+            { label: `Edit ${name}`, action: onEdit },
+            { label: 'Remove member', action: onRemove },
+          ].map(({ label, action }) => (
+            <button
+              key={label}
+              onClick={() => { setOpen(false); action() }}
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '9px 13px',
+                fontSize: 12,
+                color: '#1A1A18',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#F7F4EF')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── MemberCard ────────────────────────────────────────────────────────────────
+
+function MemberCard({
+  member,
+  onEdit,
+  onRemove,
+}: {
+  member: FamilyMember
+  onEdit: () => void
+  onRemove: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const isNew = member.isNew
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? '#FAFAF8' : '#ffffff',
+        border: isNew
+          ? `1.5px solid ${member.color}`
+          : '0.5px solid #E8E4DC',
+        borderRadius: 14,
+        overflow: 'hidden',
+        transition: 'background 150ms, border 400ms',
+      }}
+    >
+      {/* Top accent bar */}
+      <div style={{ height: 3, background: member.color }} />
+
+      {/* Card top section */}
+      <div
+        style={{
+          padding: '14px 14px 10px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div>
+          {/* Avatar */}
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: member.color,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              fontWeight: 500,
+              color: '#fff',
+            }}
           >
-            →
-          </button>
-        )}
-      </div>
-
-      {/* Confirmation card */}
-      {parsed && (
-        <div
-          className="mt-2 rounded-[10px] px-3.5 py-3 flex items-center justify-between gap-3"
-          style={{ background: '#EEEDFE' }}
-        >
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium truncate" style={{ color: '#3C3489' }}>
-              {memberConfirmText(parsed)}
-            </p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#7269C5' }}>
-              Does that look right?
-            </p>
+            {member.initials || member.name[0]?.toUpperCase()}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={handleEdit}
-              className="text-[11px] px-2 py-1 rounded-[6px] transition-opacity hover:opacity-70"
-              style={{ background: 'rgba(84,74,183,0.12)', color: '#534AB7' }}
-            >
-              edit
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={adding}
-              className="text-[11px] font-medium px-2.5 py-1 rounded-[6px] transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ background: '#534AB7', color: '#FFFFFF' }}
-            >
-              {adding ? '…' : 'add'}
-            </button>
-          </div>
+          {/* Name */}
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#1A1A18',
+              marginTop: 8,
+              lineHeight: 1.2,
+            }}
+          >
+            {member.name}
+          </p>
+          {/* Role */}
+          <p style={{ fontSize: 11, color: '#B4B2A9', marginTop: 1 }}>
+            {ROLE_LABEL[member.role]}
+          </p>
         </div>
-      )}
 
-      {/* Success flash */}
-      {success && (
+        {/* Dots menu */}
+        <DotsMenu
+          name={member.name.split(' ')[0]}
+          onEdit={onEdit}
+          onRemove={onRemove}
+        />
+      </div>
+
+      {/* Fields section */}
+      {member.fields.length > 0 && (
         <div
-          className="mt-2 rounded-[10px] px-3.5 py-2.5 flex items-center gap-2"
-          style={{ background: '#D1FAE5' }}
+          style={{
+            borderTop: '0.5px solid #F3F0EA',
+            padding: '10px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
         >
-          <IconCheck size={13} style={{ color: '#059669' }} />
-          <span className="text-[11px] font-medium" style={{ color: '#059669' }}>Member added.</span>
+          {member.fields.map((f, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ flexShrink: 0, lineHeight: 0 }}>{f.icon}</span>
+              <span style={{ fontSize: 11, color: '#1A1A18', lineHeight: 1.4 }}>{f.value}</span>
+            </div>
+          ))}
         </div>
       )}
-
-      {/* Hint */}
-      {!parsed && !success && (
-        <p className="text-[11px] mt-1.5 px-1" style={{ color: '#B4B2A9' }}>
-          Try: "Lila, age 8, Cedar Crest Academy" or "James, parent"
-        </p>
-      )}
     </div>
   )
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ── AddCard ───────────────────────────────────────────────────────────────────
 
-function formatDays(days: string[]): string {
-  const abbr: Record<string, string> = {
-    Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed',
-    Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun',
-  }
-  return days.map((d) => abbr[d] ?? d).join(', ')
-}
-
-function formatTimeRange(start: string | null, end: string | null): string {
-  function fmt(t: string) {
-    const [h, m] = t.split(':').map(Number)
-    const ampm = h >= 12 ? 'pm' : 'am'
-    const hour = h % 12 || 12
-    return `${hour}:${String(m).padStart(2, '0')}${ampm}`
-  }
-  if (!start) return ''
-  if (!end) return fmt(start)
-  return `${fmt(start)}–${fmt(end)}`
-}
-
-function daysUntil(dateStr: string): number {
-  return differenceInDays(parseISO(dateStr), startOfDay(new Date()))
-}
-
-const occasionIcon: Record<string, string> = {
-  birthday: '🎂',
-  anniversary: '💍',
-  milestone: '✨',
-  other: '📅',
-}
-
-const providerTypeLabel: Record<string, string> = {
-  cleaner: 'Cleaner',
-  babysitter: 'Babysitter',
-  tutor: 'Tutor',
-  contractor: 'Contractor',
-  other: 'Provider',
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function MemberCard({ member }: { member: Member }) {
-  const isChild = member.role === 'child'
-  return (
-    <div className="flex flex-col items-center gap-2 min-w-[80px]">
-      <Avatar name={member.name} color={member.avatar_color} size="lg" />
-      <div className="text-center">
-        <p className="text-sm font-medium text-slate-800 leading-tight">
-          {member.name.split(' ')[0]}
-        </p>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {isChild && member.grade ? member.grade : member.role === 'parent' ? 'Parent' : member.role}
-        </p>
-        {isChild && member.school && (
-          <p className="text-xs text-slate-400 truncate max-w-[80px]">{member.school.split(' ')[0]}</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ActivityRow({ activity, member }: { activity: Activity; member?: Member }) {
-  return (
-    <div className="flex items-start gap-3 py-3.5 border-b border-slate-100 last:border-0">
-      {member
-        ? <Avatar name={member.name} color={member.avatar_color} size="sm" className="mt-0.5" />
-        : <div className="w-7 h-7 rounded-full bg-slate-100 flex-shrink-0 mt-0.5" />
-      }
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium text-slate-800">{activity.name}</span>
-          {member && (
-            <Badge variant="kid">{member.name.split(' ')[0]}</Badge>
-          )}
-        </div>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {formatDays(activity.days)}
-          {activity.time_start && ` · ${formatTimeRange(activity.time_start, activity.time_end)}`}
-          {activity.location && ` · ${activity.location}`}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function OccasionRow({ occasion, member }: { occasion: Occasion; member?: Member }) {
-  const days = daysUntil(occasion.date)
-  const icon = occasionIcon[occasion.type] ?? '📅'
-  const dateFormatted = parseISO(occasion.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+function AddCard({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
 
   return (
-    <div className="flex items-center gap-3 py-3.5 border-b border-slate-100 last:border-0">
-      <span className="text-xl flex-shrink-0 w-8 text-center" aria-hidden>{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium text-slate-800">{occasion.label}</span>
-          {member && <Badge variant="kid">{member.name.split(' ')[0]}</Badge>}
-        </div>
-        <p className="text-xs text-slate-400 mt-0.5">{dateFormatted}</p>
-      </div>
-      <span className={`text-xs font-semibold flex-shrink-0 ${
-        days <= 7 ? 'text-[#E8392A]' : days <= 30 ? 'text-amber-600' : 'text-slate-400'
-      }`}>
-        {days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `in ${days}d`}
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? '#F3F1EC' : '#FAFAF8',
+        border: '1px dashed #D3D1C7',
+        borderRadius: 14,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px 16px',
+        gap: 6,
+        cursor: 'pointer',
+        minHeight: 140,
+        transition: 'background 150ms',
+      }}
+    >
+      <IconSparkles size={20} color="#C4C2BA" />
+      <span
+        style={{
+          fontSize: 11,
+          color: '#C4C2BA',
+          textAlign: 'center',
+          lineHeight: 1.5,
+        }}
+      >
+        Tell Kinly about<br />someone new
       </span>
     </div>
   )
 }
 
-function StarRating({ rating }: { rating: number | null }) {
-  const stars = Math.round(rating ?? 0)
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} className={`w-3.5 h-3.5 ${i < stars ? 'text-amber-400' : 'text-slate-200'}`}
-          viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 1l1.8 3.6L14 5.3l-3 2.9.7 4.1L8 10.4l-3.7 1.9.7-4.1-3-2.9 4.2-.7z" />
-        </svg>
-      ))}
-    </div>
-  )
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
-function ProviderRow({ provider }: { provider: Provider }) {
-  return (
-    <div className="flex items-center gap-3 py-3.5 border-b border-slate-100 last:border-0">
-      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 text-slate-500">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-          <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-        </svg>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800">{provider.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-slate-400">{providerTypeLabel[provider.type] ?? provider.type}</span>
-          {provider.rating && (
-            <>
-              <span className="text-slate-200">·</span>
-              <StarRating rating={provider.rating} />
-            </>
-          )}
-        </div>
-      </div>
-      {(provider.phone || provider.email) && (
-        <a
-          href={provider.phone ? `tel:${provider.phone}` : `mailto:${provider.email}`}
-          className="text-xs text-[#E8392A] hover:underline flex-shrink-0"
-        >
-          {provider.phone ?? provider.email}
-        </a>
-      )}
-    </div>
-  )
-}
+const EXAMPLE_CHIPS = [
+  "My daughter Lila is 8, she goes to Cedar Crest",
+  "My partner Jake works at Amazon",
+  "Add my mum, she helps with pickup",
+]
 
-// ─── Skeletons ────────────────────────────────────────────────────────────────
-
-function MemberSkeleton() {
+function EmptyState({ onChipClick }: { onChipClick: (text: string) => void }) {
   return (
-    <div className="flex flex-col items-center gap-2 min-w-[80px] animate-pulse">
-      <div className="w-11 h-11 rounded-full bg-slate-100" />
-      <div className="w-14 h-3 bg-slate-100 rounded" />
-      <div className="w-10 h-3 bg-slate-100 rounded" />
-    </div>
-  )
-}
-
-function RowSkeleton() {
-  return (
-    <div className="flex items-center gap-3 py-3.5 border-b border-slate-100 last:border-0 animate-pulse">
-      <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0" />
-      <div className="flex-1 space-y-1.5">
-        <div className="h-3.5 bg-slate-100 rounded w-2/5" />
-        <div className="h-3 bg-slate-100 rounded w-3/5" />
+    <div
+      style={{
+        background: '#fff',
+        border: '0.5px solid #E8E4DC',
+        borderRadius: 14,
+        padding: '28px 24px',
+        maxWidth: 420,
+      }}
+    >
+      <p style={{ fontSize: 15, fontWeight: 500, color: '#1A1A18', marginBottom: 8 }}>
+        Start with your family
+      </p>
+      <p
+        style={{
+          fontSize: 13,
+          color: '#888780',
+          lineHeight: 1.6,
+          marginBottom: 16,
+        }}
+      >
+        Just tell Kinly who's in your family — names, ages, schools, jobs. No forms.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {EXAMPLE_CHIPS.map((chip) => (
+          <button
+            key={chip}
+            onClick={() => onChipClick(chip)}
+            style={{
+              background: '#EEEDFE',
+              color: '#534AB7',
+              fontSize: 12,
+              borderRadius: 20,
+              padding: '6px 14px',
+              border: 'none',
+              cursor: 'pointer',
+              lineHeight: 1.4,
+              transition: 'opacity 150ms',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+          >
+            {chip}
+          </button>
+        ))}
       </div>
     </div>
   )
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function Family() {
   const familyId = useAuthStore((s) => s.familyId)
 
-  const [members,    setMembers]    = useState<Member[]>([])
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [occasions,  setOccasions]  = useState<Occasion[]>([])
-  const [providers,  setProviders]  = useState<Provider[]>([])
-  const [loading,    setLoading]    = useState(true)
+  const [members,  setMembers]  = useState<FamilyMember[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [newIds,   setNewIds]   = useState<Set<string>>(new Set())
 
-  const loadData = useCallback(async () => {
+  // Ref to KinlyBar focus function (for AddCard click)
+  const kinlyFocusRef  = useRef<(() => void) | null>(null)
+  // Ref to KinlyBar prefill function (for dots-menu Edit / Remove)
+  const kinlyPrefillRef = useRef<((text: string) => void) | null>(null)
+
+  // ── Load members ─────────────────────────────────────────────────────────
+  const loadMembers = useCallback(async () => {
     if (!familyId) return
     setLoading(true)
     try {
-      const [mRes, aRes, oRes, pRes] = await Promise.all([
-        supabase.from('members').select('*').eq('family_id', familyId).order('role'),
-        supabase.from('activities').select('*').eq('family_id', familyId),
-        supabase.from('occasions').select('*').eq('family_id', familyId).order('date'),
-        supabase.from('providers').select('*').eq('family_id', familyId),
-      ])
-      setMembers((mRes.data as Member[]) ?? [])
-      setActivities((aRes.data as Activity[]) ?? [])
-      const today = startOfDay(new Date())
-      setOccasions(
-        ((oRes.data as Occasion[]) ?? []).filter((o) => !isAfter(today, parseISO(o.date)))
-      )
-      setProviders((pRes.data as Provider[]) ?? [])
+      const { data } = await supabase
+        .from('members')
+        .select('*')
+        .eq('family_id', familyId)
+        .order('role')
+      const rows = (data as Member[]) ?? []
+      let firstParent = true
+      const mapped = rows.map((m) => {
+        const isFirst = m.role === 'parent' && firstParent
+        if (m.role === 'parent') firstParent = false
+        return toFamilyMember(m, isFirst)
+      })
+      setMembers(mapped)
     } finally {
       setLoading(false)
     }
   }, [familyId])
 
-  useEffect(() => { void loadData() }, [loadData])
+  useEffect(() => { void loadMembers() }, [loadMembers])
 
-  const memberById = (id: string | null) => members.find((m) => m.id === id)
-
-  // ── Add member via Kinly input ─────────────────────────────────────────────
-  async function addMember(parsed: ParsedMember) {
-    if (!familyId) return
-    // Approximate date_of_birth from age
-    const dob = parsed.age
-      ? format(new Date(new Date().getFullYear() - parsed.age, 0, 1), 'yyyy-MM-dd')
-      : null
-
-    await supabase.from('members').insert({
-      family_id:    familyId,
-      name:         parsed.name,
-      role:         parsed.role,
-      date_of_birth: dob,
-      school:       parsed.school,
-      grade:        parsed.grade,
-      avatar_color: parsed.role === 'child' ? '#8B5CF6' : '#64748B',
-    })
-    await loadData()
+  // ── Mark a card as "just added" for 4s ───────────────────────────────────
+  function markNew(id: string) {
+    setNewIds((prev) => new Set([...prev, id]))
+    setTimeout(() => {
+      setNewIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 4000)
   }
 
+  // ── KinlyBar: handle family messages (extraction + member add) ────────────
+  async function handleKinlyMessage(text: string): Promise<React.ReactNode | null> {
+    if (!familyId) return null
+    const parsed = parseMember(text)
+    if (!parsed.name) return null   // nothing extractable — let Groq handle it normally
+
+    // Derive approximate date_of_birth from age
+    const dob = parsed.age
+      ? format(new Date(new Date().getFullYear() - parsed.age, 6, 1), 'yyyy-MM-dd')
+      : null
+
+    const color = parsed.role === 'child' ? '#AFA9EC' : '#5DCAA5'
+
+    const { data: inserted } = await supabase
+      .from('members')
+      .insert({
+        family_id:     familyId,
+        name:          parsed.name,
+        role:          parsed.role === 'child' ? 'child' : 'parent',
+        date_of_birth: dob,
+        school:        parsed.school ?? null,
+        grade:         parsed.grade ?? null,
+        avatar_color:  color,
+      })
+      .select()
+      .single()
+
+    if (inserted) {
+      const dbMember = inserted as Member
+      const isOwner  = false // newly added = never the owner
+      const fm       = toFamilyMember(dbMember, isOwner)
+
+      // Animate card in
+      setMembers((prev) => [...prev, fm])
+      markNew(fm.id)
+    }
+
+    const extractData: ExtractionData = {
+      name:   parsed.name,
+      role:   parsed.role,
+      age:    parsed.age ? `${parsed.age}` : undefined,
+      school: parsed.school ?? undefined,
+      grade:  parsed.grade ?? undefined,
+      notes:  parsed.notes ?? undefined,
+    }
+
+    return <ExtractionDisplay data={extractData} />
+  }
+
+  // ── Prefill KinlyBar input (dots-menu: Edit / Remove) ────────────────────
+  function prefillKinly(text: string) {
+    kinlyPrefillRef.current?.(text)
+  }
+
+  const rosterRef = useRef<HTMLDivElement>(null)
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <PageWrapper>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Family</h1>
-        <p className="text-sm text-slate-400 mt-1">Members, activities, and upcoming occasions</p>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 'calc(100vh - 52px)',
+        background: '#F7F4EF',
+      }}
+    >
+      {/* KinlyBar — above all content */}
+      <KinlyBar
+        page="family"
+        context={{ memberNames: members.map((m) => m.name.split(' ')[0]) }}
+        contextLabel="Building your family profiles"
+        onBeforeQuery={handleKinlyMessage}
+        onMountFocus={(fn) => { kinlyFocusRef.current = fn }}
+        prefillRef={kinlyPrefillRef}
+      />
+
+      {/* Page header */}
+      <div style={{ padding: '22px 28px 0' }}>
+        <h1
+          style={{
+            fontSize: 18,
+            fontWeight: 500,
+            color: '#1A1A18',
+            letterSpacing: '-0.3px',
+            margin: 0,
+          }}
+        >
+          Your family
+        </h1>
+        <p
+          style={{
+            fontSize: 12,
+            color: '#B4B2A9',
+            marginTop: 3,
+            marginBottom: 20,
+          }}
+        >
+          Tell Kinly about anyone — it fills in the details.
+        </p>
       </div>
 
-      {/* ── Kinly add-member input ── */}
-      <AddMemberInput onAdd={addMember} />
-
-      {/* ── Members ── */}
-      <section className="mb-8">
-        <SectionHeader label="Members" count={loading ? undefined : members.length} />
-        <Card>
-          <div className="flex gap-6 overflow-x-auto pb-1">
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => <MemberSkeleton key={i} />)
-              : members.length === 0
-              ? <p className="text-sm text-slate-400">No members yet</p>
-              : members.map((m) => <MemberCard key={m.id} member={m} />)
-            }
+      {/* Roster */}
+      <div
+        ref={rosterRef}
+        style={{
+          padding: '16px 28px 28px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: 12,
+          alignContent: 'start',
+        }}
+      >
+        {loading ? (
+          // Skeletons
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                height: 140,
+                borderRadius: 14,
+                background: '#EFEFED',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            />
+          ))
+        ) : members.length === 0 ? (
+          // Empty state spans full width
+          <div style={{ gridColumn: '1 / -1' }}>
+            <EmptyState
+              onChipClick={(text) => prefillKinly(text)}
+            />
           </div>
-        </Card>
-      </section>
-
-      {/* ── Activities ── */}
-      <section className="mb-8">
-        <SectionHeader label="Activities" count={loading ? undefined : activities.length} />
-        <Card padding="none">
-          <div className="px-4">
-            {loading
-              ? Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
-              : activities.length === 0
-              ? <p className="text-sm text-slate-400 py-6 text-center">No activities yet</p>
-              : activities.map((a) => (
-                  <ActivityRow key={a.id} activity={a} member={memberById(a.member_id)} />
-                ))
-            }
-          </div>
-        </Card>
-      </section>
-
-      {/* ── Upcoming Occasions ── */}
-      <section className="mb-8">
-        <SectionHeader label="Upcoming Occasions" count={loading ? undefined : occasions.length} />
-        <Card padding="none">
-          <div className="px-4">
-            {loading
-              ? Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
-              : occasions.length === 0
-              ? <p className="text-sm text-slate-400 py-6 text-center">No upcoming occasions</p>
-              : occasions.map((o) => (
-                  <OccasionRow key={o.id} occasion={o} member={memberById(o.member_id ?? null) ?? undefined} />
-                ))
-            }
-          </div>
-        </Card>
-      </section>
-
-      {/* ── Providers ── */}
-      <section className="mb-8">
-        <SectionHeader label="Providers" count={loading ? undefined : providers.length} />
-        <Card padding="none">
-          <div className="px-4">
-            {loading
-              ? Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)
-              : providers.length === 0
-              ? <p className="text-sm text-slate-400 py-6 text-center">No providers yet</p>
-              : providers.map((p) => <ProviderRow key={p.id} provider={p} />)
-            }
-          </div>
-        </Card>
-      </section>
-    </PageWrapper>
+        ) : (
+          <>
+            {members.map((m) => (
+              <MemberCard
+                key={m.id}
+                member={{ ...m, isNew: newIds.has(m.id) }}
+                onEdit={() => prefillKinly(`Edit ${m.name.split(' ')[0]}...`)}
+                onRemove={() => prefillKinly(`Remove ${m.name.split(' ')[0]} from the family`)}
+              />
+            ))}
+            <AddCard onClick={() => kinlyFocusRef.current?.()} />
+          </>
+        )}
+      </div>
+    </div>
   )
 }

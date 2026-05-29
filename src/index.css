@@ -44,6 +44,36 @@
   --color-k-pill-us-text:   #993556;
 }
 
+/* ── KinlyBar gradient ring animations ────────────────────────────────────── */
+@keyframes gradientSpin {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer {
+  0%   { opacity: 0.75; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.75; }
+}
+
+.kinly-ring {
+  padding: 1.5px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #AFA9EC, #EF9F27, #5DCAA5, #ED93B1, #AFA9EC);
+  background-size: 300% 300%;
+  animation: gradientSpin 4s ease infinite, shimmer 3s ease-in-out infinite;
+  box-shadow: 0 4px 16px rgba(175, 169, 236, 0.18), 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 150ms;
+}
+
+.kinly-ring.ring-focused {
+  box-shadow:
+    0 0 0 2px #AFA9EC,
+    0 4px 20px rgba(175, 169, 236, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
 @layer base {
   * { box-sizing: border-box; }
   body {
