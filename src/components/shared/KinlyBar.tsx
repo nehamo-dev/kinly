@@ -409,8 +409,8 @@ export function KinlyBar({
         padding:      open ? '10px 0' : '11px 0',
       }}
     >
-      {/* Inner centred container — cap width, keep dark bg full-width */}
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px' }}>
+      {/* Inner centred container — matches TopNav max-w-[1200px] */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
 
         {/* ── Collapsed ─────────────────────────────────────────────────── */}
         {!open && (
