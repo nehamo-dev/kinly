@@ -402,13 +402,15 @@ export function KinlyBar({
       ref={wrapRef}
       style={{
         background:   '#1A1A18',
-        padding:      open ? '10px 28px' : '11px 28px',
         borderBottom: '0.5px solid #2C2C2A',
         flexShrink:   0,
         position:     'relative',
         zIndex:       30,
+        padding:      open ? '10px 0' : '11px 0',
       }}
     >
+      {/* Inner centred container — cap width, keep dark bg full-width */}
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px' }}>
 
         {/* ── Collapsed ─────────────────────────────────────────────────── */}
         {!open && (
@@ -688,6 +690,7 @@ export function KinlyBar({
           <span style={{ fontSize: 11, color: '#EF9F27' }}>Listening — speak now</span>
         </div>
       )}
+      </div>{/* end inner centred container */}
     </div>
   )
 }
