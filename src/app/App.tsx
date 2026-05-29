@@ -14,7 +14,8 @@ import { Welcome } from '../features/onboarding/Welcome'
 import { Onboarding } from '../features/onboarding/Onboarding'
 import { Home } from '../features/home/Home'
 import { Family } from '../features/family/Family'
-import { ShellScreen } from '../features/home/ShellScreen'
+import { HomeScreen } from '../features/home/HomeScreen'
+import { InboxScreen } from '../features/inbox/InboxScreen'
 import { CalendarSettings } from '../features/calendar/CalendarSettings'
 import { CalendarScreen } from '../features/calendar/CalendarScreen'
 import { AuthCallback } from '../features/calendar/AuthCallback'
@@ -261,7 +262,7 @@ export function App() {
             <Route path="/home" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <ShellScreen title="Home" subtitle="Services, maintenance, and shopping lists" />
+                  <HomeScreen />
                 </AppLayout>
               </ProtectedRoute>
             } />
@@ -269,7 +270,7 @@ export function App() {
             <Route path="/inbox" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <ShellScreen title="Inbox" subtitle="Emails flagged as relevant to your family" />
+                  <InboxScreen />
                 </AppLayout>
               </ProtectedRoute>
             } />

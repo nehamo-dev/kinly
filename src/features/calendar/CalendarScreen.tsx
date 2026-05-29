@@ -139,14 +139,13 @@ function CalendarHeader({ selectedDate, weekDaysList, dotMap, onDaySelect, onPre
           const ds       = toStr(day)
           const selected = ds === selectedDate
           const today    = isToday(day)
+          const past     = ds < toStr(new Date()) && !today
           const dots     = (dotMap[ds] ?? []).slice(0, 3)
 
           let bg        = 'transparent'
-          let nameColor = '#5F5E5A'
-          let numColor  = '#5F5E5A'
-          if (today && !selected) { bg = 'transparent'; nameColor = '#5F5E5A'; numColor = '#F7F4EF' }
-          if (today && !selected) bg = 'transparent'
-          if (today) { numColor = '#F7F4EF'; nameColor = '#5F5E5A' }
+          let nameColor = past ? '#3A3A38' : '#5F5E5A'
+          let numColor  = past ? '#3A3A38' : '#5F5E5A'
+
           if (selected && !today) { bg = '#2C2C2A'; nameColor = '#888780'; numColor = '#F7F4EF' }
           if (selected && today)  { bg = '#2C2C2A'; nameColor = '#888780'; numColor = '#F7F4EF' }
           // Today-not-selected: cream pill
@@ -171,7 +170,7 @@ function CalendarHeader({ selectedDate, weekDaysList, dotMap, onDaySelect, onPre
               </span>
               <div style={{ display: 'flex', gap: 3, marginTop: 5, height: 5, alignItems: 'center' }}>
                 {dots.map((cat, i) => (
-                  <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: selected ? 'rgba(255,255,255,0.35)' : CAT[cat].dot, display: 'block', flexShrink: 0 }} />
+                  <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: selected ? 'rgba(255,255,255,0.35)' : past ? '#3A3A38' : CAT[cat].dot, display: 'block', flexShrink: 0 }} />
                 ))}
               </div>
             </button>
@@ -236,11 +235,12 @@ interface DayGroupProps {
 
 function DayGroup({ date, events, members, currentEventId, groupRef }: DayGroupProps) {
   if (events.length === 0) return null
-  const today = isToday(date)
+  const today   = isToday(date)
+  const isPast  = toStr(date) < toStr(new Date()) && !today
   return (
-    <div ref={groupRef} data-date={toStr(date)} style={{ marginBottom: 24 }}>
+    <div ref={groupRef} data-date={toStr(date)} style={{ marginBottom: 24, opacity: isPast ? 0.55 : 1 }}>
       <div className="flex items-center gap-2" style={{ paddingBottom: 10, borderBottom: '0.5px solid #EEEDE8', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#1A1A18' }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: isPast ? '#888780' : '#1A1A18' }}>
           {format(date, 'EEEE, MMMM d')}
         </span>
         {today && (
