@@ -62,6 +62,7 @@ export async function executeKinlyAction(
   action: KinlyAction,
   familyId: string,
   members: Member[],
+  userId?: string,
 ): Promise<string> {
   switch (action.type) {
 
@@ -92,6 +93,7 @@ export async function executeKinlyAction(
     case 'add_task': {
       const { error } = await supabase.from('tasks').insert({
         family_id: familyId,
+        user_id:   userId ?? (await supabase.auth.getUser()).data.user?.id ?? null,
         event_id:  null,
         title:     action.title,
         due_date:  action.due_date ?? null,

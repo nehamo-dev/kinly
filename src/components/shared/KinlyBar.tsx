@@ -178,6 +178,7 @@ export function KinlyBar({
   defaultOpen = false,
 }: KinlyBarProps) {
   const familyId = useAuthStore((s) => s.familyId)
+  const userId   = useAuthStore((s) => s.user?.id)
 
   const [open,      setOpen]      = useState(defaultOpen)
   const [messages,  setMessages]  = useState<ChatMsg[]>([])
@@ -287,9 +288,9 @@ export function KinlyBar({
     // Optional pre-processing (e.g. Family page extraction panel)
     const extra = onBeforeQuery ? await onBeforeQuery(text) : null
 
-    const userId = crypto.randomUUID()
-    const botId  = crypto.randomUUID()
-    const userMsg: ChatMsg      = { id: userId, role: 'user',      content: text }
+    const userMsgId = crypto.randomUUID()
+    const botId     = crypto.randomUUID()
+    const userMsg: ChatMsg      = { id: userMsgId, role: 'user',      content: text }
     const assistantMsg: ChatMsg = { id: botId,  role: 'assistant', content: '', extra: extra ?? undefined }
 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
@@ -361,7 +362,7 @@ export function KinlyBar({
       })
 
       try {
-        const resultLabel = await executeKinlyAction(action, familyId, members)
+        const resultLabel = await executeKinlyAction(action, familyId, members, userId)
         setMessages((prev) => {
           const copy = [...prev]
           const last = copy[copy.length - 1]
