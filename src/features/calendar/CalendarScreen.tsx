@@ -312,7 +312,7 @@ function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
       {/* this week */}
       {weekRows.length > 0 && (
         <div style={{ marginBottom: 22 }}>
-          <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.06em', color: '#B4B2A9', marginBottom: 10 }}>
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10 }}>
             this week
           </p>
           {weekRows.map((row) => (
@@ -328,7 +328,7 @@ function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
       {/* for you (demo: hardcoded; live: omit for now) */}
       {isDemo && (
         <div style={{ marginBottom: 22 }}>
-          <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.06em', color: '#B4B2A9', marginBottom: 10 }}>
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10 }}>
             for you
           </p>
           {DEMO_FOR_YOU.map((item) => (
@@ -350,7 +350,7 @@ function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
       {/* coming up */}
       {upcoming.length > 0 && (
         <div>
-          <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.06em', color: '#B4B2A9', marginBottom: 10 }}>
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10 }}>
             coming up
           </p>
           {upcoming.map((occ) => (

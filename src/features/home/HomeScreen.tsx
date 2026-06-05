@@ -381,7 +381,7 @@ export function HomeScreen() {
         >
           Your home.
         </h1>
-        <p style={{ fontSize: 12, color: '#b0b0b0', marginTop: 4, marginBottom: 20 }}>
+        <p style={{ fontSize: 12, color: '#b4b2a9', marginTop: 4, marginBottom: 20 }}>
           Services, maintenance and shopping.
         </p>
       </div>

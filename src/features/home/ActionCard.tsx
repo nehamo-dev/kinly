@@ -46,7 +46,7 @@ export function ActionCard({
           {title}
         </p>
         {subtitle && (
-          <p style={{ fontSize: 10, color: '#b0b0b0', lineHeight: 1.4 }}>
+          <p style={{ fontSize: 10, color: '#b4b2a9', lineHeight: 1.4 }}>
             {subtitle}
           </p>
         )}

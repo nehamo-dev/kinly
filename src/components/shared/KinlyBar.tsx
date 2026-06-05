@@ -546,8 +546,8 @@ export function KinlyBar({
                       <div style={{ maxWidth: '88%' }}>
                         <div
                           style={{
-                            background:   '#F7F4EF',
-                            border:       '0.5px solid #EEEDE8',
+                            background:   '#f5f5f3',
+                            border:       '0.5px solid #ebebeb',
                             borderRadius: '0 10px 10px 10px',
                             padding:      '9px 12px',
                             fontSize:     12,

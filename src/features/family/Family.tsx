@@ -228,7 +228,7 @@ function DotsMenu({
                 border: 'none',
                 cursor: 'pointer',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#F7F4EF')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f3')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
             >
               {label}
@@ -595,7 +595,7 @@ export function Family() {
         <p
           style={{
             fontSize: 12,
-            color: '#b0b0b0',
+            color: '#b4b2a9',
             marginTop: 4,
             marginBottom: 20,
           }}

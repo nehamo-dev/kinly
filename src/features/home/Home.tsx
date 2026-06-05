@@ -121,7 +121,7 @@ function DividerLabel({ children }: { children: React.ReactNode }) {
     }}>
       <span style={{
         fontSize: 9, fontWeight: 500, letterSpacing: '0.06em',
-        textTransform: 'uppercase', color: '#cccccc', whiteSpace: 'nowrap',
+        textTransform: 'uppercase', color: '#bbbbbb', whiteSpace: 'nowrap',
       }}>
         {children}
       </span>
@@ -266,9 +266,9 @@ export function Home() {
                 alignItems:  'center',
                 gap:          3,
                 fontSize:     10,
-                color:       '#b0a898',
-                background:  '#f7f5f2',
-                border:      '0.5px solid #edeae5',
+                color:       '#b4b2a9',
+                background:  '#f5f5f3',
+                border:      '0.5px solid #ebebeb',
                 borderRadius: 20,
                 padding:     '3px 7px',
               }}>
@@ -298,7 +298,7 @@ export function Home() {
             {tasksLoading ? (
               <><CardSkeleton /><CardSkeleton /><CardSkeleton /></>
             ) : needsYouTasks.length === 0 ? (
-              <p style={{ fontSize: 11, color: '#b0b0b0' }}>Nothing urgent right now.</p>
+              <p style={{ fontSize: 11, color: '#b4b2a9' }}>Nothing urgent right now.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {needsYouTasks.map(buildCard)}

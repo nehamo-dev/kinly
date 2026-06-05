@@ -80,7 +80,7 @@ export function ScheduleCard({ events, members, isLoading, isDemo }: ScheduleCar
 
   const sorted = sortedEvents(events)
   if (sorted.length === 0) {
-    return <p style={{ fontSize: 11, color: '#b0b0b0' }}>Nothing on the calendar today.</p>
+    return <p style={{ fontSize: 11, color: '#b4b2a9' }}>Nothing on the calendar today.</p>
   }
 
   const now    = new Date()

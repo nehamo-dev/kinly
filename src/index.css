@@ -78,7 +78,7 @@
   * { box-sizing: border-box; }
   body {
     font-family: 'Inter', sans-serif;
-    background-color: var(--color-k-base);
+    background-color: #ffffff;
     color: var(--color-k-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
