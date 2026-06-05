@@ -19,8 +19,18 @@ const CAT: Record<Category, { dot: string; border: string; chipBg: string; chipT
 
 
 const DEMO_FOR_YOU = [
-  { title: "Lila's all set to play",        subtitle: "Soccer form ready · closes Friday 5pm", agentLine: "one tap and it's done" },
-  { title: 'Saturday night is almost sorted', subtitle: 'Jess just needs a quick text',          agentLine: 'Kinly wrote it · just send' },
+  {
+    title:     "Lila's all set to play",
+    subtitle:  "Soccer form ready · closes Friday 5pm",
+    agentLine: "one tap and it's done",
+    prefill:   "Lila's soccer registration form is ready and closes Friday at 5pm. Go ahead and submit it — let me know when it's done.",
+  },
+  {
+    title:     'Saturday night is almost sorted',
+    subtitle:  'Jess just needs a quick text',
+    agentLine: "Kinly wrote it · review & send",
+    prefill:   "Here's a draft for Jess: 'Hi Jess! Just confirming you're all set to babysit this Saturday evening for our anniversary dinner — should be back by midnight 🙏 Let me know if anything changes!' Does this look good, or want me to tweak it?",
+  },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -113,7 +123,7 @@ function CalendarHeader({ selectedDate, weekDaysList, dotMap, onDaySelect, onPre
           <button
             onClick={onToday}
             className="transition-colors hover:opacity-80"
-            style={{ background: '#2C2C2A', color: '#888780', fontSize: 11, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer' }}
+            style={{ background: '#FDF0DC', color: '#b07020', fontSize: 11, padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer' }}
           >
             today
           </button>
@@ -210,7 +220,7 @@ function EventCard({ ev, members, isCurrent }: EventCardProps) {
         cursor: 'default',
       }}
     >
-      <span style={{ fontSize: 12, fontWeight: 500, color: '#888780', minWidth: 44, flexShrink: 0, paddingTop: 2 }}>
+      <span style={{ fontSize: 12, fontWeight: 500, color: '#666460', minWidth: 44, flexShrink: 0, paddingTop: 2 }}>
         {fmtTime(ev.time_start)}
       </span>
       <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#1A1A18', lineHeight: 1.35 }}>
@@ -267,9 +277,10 @@ interface SidePanelProps {
   members: Member[]
   occasions: Occasion[]
   isDemo: boolean
+  kinlyPrefill?: React.MutableRefObject<((text: string) => void) | null>
 }
 
-function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
+function SidePanel({ weekEvents, members, occasions, isDemo, kinlyPrefill }: SidePanelProps) {
   // "this week" — member + event count
   type WeekRow = { label: string; color: string; count: number }
   const weekRows: WeekRow[] = []
@@ -327,21 +338,24 @@ function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
 
       {/* for you (demo: hardcoded; live: omit for now) */}
       {isDemo && (
-        <div style={{ marginBottom: 22 }}>
-          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10 }}>
+        <div style={{ marginBottom: 22, paddingTop: 4, borderTop: '0.5px solid #f0eeea' }}>
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10, marginTop: 16 }}>
             for you
           </p>
           {DEMO_FOR_YOU.map((item) => (
             <div key={item.title} style={{ background: '#fff', border: '0.5px solid #E8E4DC', borderRadius: 9, padding: '10px 12px', marginBottom: 7 }}>
               <p style={{ fontSize: 12, fontWeight: 500, color: '#1A1A18' }}>{item.title}</p>
-              <p style={{ fontSize: 11, color: '#B4B2A9', marginTop: 2, lineHeight: 1.4 }}>{item.subtitle}</p>
-              <span
+              <p style={{ fontSize: 11, color: '#b4b2a9', marginTop: 2, lineHeight: 1.4 }}>{item.subtitle}</p>
+              <button
+                onClick={() => kinlyPrefill?.current?.(item.prefill)}
                 className="inline-flex items-center gap-1"
-                style={{ background: '#EEEDFE', color: '#3C3489', fontSize: 10, padding: '4px 9px', borderRadius: 5, marginTop: 6 }}
+                style={{ background: '#EEEDFE', color: '#3C3489', fontSize: 10, padding: '4px 9px', borderRadius: 5, marginTop: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.75')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
               >
                 <IconSparkles size={10} />
                 {item.agentLine}
-              </span>
+              </button>
             </div>
           ))}
         </div>
@@ -349,8 +363,8 @@ function SidePanel({ weekEvents, members, occasions, isDemo }: SidePanelProps) {
 
       {/* coming up */}
       {upcoming.length > 0 && (
-        <div>
-          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10 }}>
+        <div style={{ paddingTop: 4, borderTop: '0.5px solid #f0eeea' }}>
+          <p style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.07em', color: '#bbbbbb', textTransform: 'uppercase' as const, marginBottom: 10, marginTop: 16 }}>
             coming up
           </p>
           {upcoming.map((occ) => (
@@ -379,9 +393,10 @@ export function CalendarScreen() {
   const [loading,      setLoading]      = useState(true)
   const [currentEvId,  setCurrentEvId]  = useState<string | null>(null)
 
-  const days     = weekDays(ws)
-  const listRef  = useRef<HTMLDivElement>(null)
-  const groupRefs = useRef<Record<string, HTMLDivElement>>({})
+  const days          = weekDays(ws)
+  const listRef       = useRef<HTMLDivElement>(null)
+  const groupRefs     = useRef<Record<string, HTMLDivElement>>({})
+  const kinlyPrefillRef = useRef<((text: string) => void) | null>(null)
 
   // ── Load data ────────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -474,6 +489,7 @@ export function CalendarScreen() {
             .map((e) => ({ title: e.title, time: e.time_start })),
         }}
         members={members}
+        prefillRef={kinlyPrefillRef}
         onActionExecuted={() => { void loadData() }}
       />
 
@@ -535,6 +551,7 @@ export function CalendarScreen() {
           members={members}
           occasions={occasions}
           isDemo={isDemo}
+          kinlyPrefill={kinlyPrefillRef}
         />
       </div>
       </div>{/* end max-width wrapper */}

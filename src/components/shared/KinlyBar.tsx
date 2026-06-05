@@ -9,6 +9,7 @@ import {
   IconSparkles,
   IconMicrophone,
   IconX,
+  IconPhoto,
 } from '@tabler/icons-react'
 import { streamKinly } from '../../lib/assistant'
 import {
@@ -76,6 +77,16 @@ const PAGE_CONTEXT_LABEL: Record<KinlyBarPage, string> = {
   family:   'Building your family profiles',
   home:     'Your home',
   inbox:    'Your inbox',
+}
+
+// ── Focus chips (shown in expanded state before first message) ────────────────
+
+const FOCUS_CHIPS: Record<KinlyBarPage, string[]> = {
+  today:    ["What's today looking like?", "Add an event", "What needs attention?"],
+  calendar: ["What's on this week?", "Add an event", "Any conflicts?"],
+  family:   ["Add a family member", "What do you know about Lila?", "Who helps with pickup?"],
+  home:     ["What's overdue?", "Add a home service", "What's on the shopping list?"],
+  inbox:    ["Summarise my inbox", "What needs a reply?", "Flag something urgent"],
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -187,10 +198,11 @@ export function KinlyBar({
   const [promptIdx, setPromptIdx] = useState(0)
   const [promptVis, setPromptVis] = useState(true)
 
-  const inputRef  = useRef<HTMLInputElement>(null)
-  const abortRef  = useRef<AbortController | null>(null)
-  const threadRef = useRef<HTMLDivElement>(null)
-  const wrapRef   = useRef<HTMLDivElement>(null)
+  const inputRef     = useRef<HTMLInputElement>(null)
+  const abortRef     = useRef<AbortController | null>(null)
+  const threadRef    = useRef<HTMLDivElement>(null)
+  const wrapRef      = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const placeholders = PLACEHOLDERS[page]
   const ctxLabel     = contextLabel ?? PAGE_CONTEXT_LABEL[page]
@@ -211,7 +223,7 @@ export function KinlyBar({
         setPromptIdx((i) => (i + 1) % placeholders.length)
         setPromptVis(true)
       }, 300)
-    }, 2600)
+    }, 4000)
     return () => clearInterval(id)
   }, [placeholders.length])
 
@@ -397,6 +409,28 @@ export function KinlyBar({
     }
   }
 
+  // ── Camera / image upload handler ────────────────────────────────────────
+  function handleCamera(e: React.MouseEvent) {
+    e.stopPropagation()
+    fileInputRef.current?.click()
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    openBar()
+    const name = file.name
+    const userMsgId2 = crypto.randomUUID()
+    const botId2     = crypto.randomUUID()
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId2, role: 'user',      content: `📎 ${name}` },
+      { id: botId2,     role: 'assistant', content: "Image reading is coming soon — I'll be able to parse school flyers, permission slips, and invites and add them straight to your calendar. For now, type what's on the form and I'll handle it." },
+    ])
+    // reset so same file can be re-selected
+    e.target.value = ''
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
@@ -413,6 +447,15 @@ export function KinlyBar({
       {/* Inner centred container — matches TopNav max-w-[1200px] */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
 
+        {/* Hidden file input for image upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+
         {/* ── Collapsed ─────────────────────────────────────────────────── */}
         {!open && (
           <div
@@ -423,25 +466,34 @@ export function KinlyBar({
               background:   'rgba(255,255,255,0.08)',
               border:       '0.5px solid rgba(255,255,255,0.14)',
               borderRadius:  8,
-              padding:      '8px 12px',
+              padding:      '7px 10px 7px 12px',
               cursor:       'text',
             }}
             onClick={openBar}
           >
-            {/* Amber circle with sparkle */}
-            <div style={{
-              width: 18, height: 18, borderRadius: '50%',
-              background: '#E8A44A',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <IconSparkles size={10} color="#fff" />
+            {/* Kinly identity — amber dot + wordmark */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%',
+                background: '#E8A44A',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <IconSparkles size={11} color="#fff" />
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: '-0.01em', userSelect: 'none' }}>
+                Kinly
+              </span>
             </div>
+
+            {/* Separator */}
+            <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.14)', flexShrink: 0 }} />
+
+            {/* Rotating placeholder */}
             <span
               style={{
                 flex:       1,
                 fontSize:   12,
-                color:      'rgba(255,255,255,0.38)',
+                color:      'rgba(255,255,255,0.35)',
                 transition: 'opacity 300ms',
                 opacity:     promptVis ? 1 : 0,
                 userSelect: 'none',
@@ -449,16 +501,25 @@ export function KinlyBar({
             >
               {placeholders[promptIdx]}
             </span>
-            {/* Mic — visible in collapsed state */}
+
+            {/* Camera / upload */}
+            <button
+              onClick={handleCamera}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', lineHeight: 0, flexShrink: 0 }}
+              title="Attach a photo or file"
+            >
+              <IconPhoto size={17} color="rgba(255,255,255,0.28)" />
+            </button>
+
+            {/* Mic */}
             <button
               onClick={handleMic}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 0 }}
-              title="Voice input"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', lineHeight: 0, flexShrink: 0 }}
+              title="Talk to Kinly"
             >
               <IconMicrophone
-                size={14}
-                color={voice.listening ? '#E8A44A' : 'rgba(255,255,255,0.25)'}
-                style={{ flexShrink: 0 }}
+                size={19}
+                color={voice.listening ? '#E8A44A' : 'rgba(255,255,255,0.35)'}
                 className={voice.listening ? 'animate-pulse' : ''}
               />
             </button>
@@ -499,6 +560,29 @@ export function KinlyBar({
                 <IconX size={15} color="#C4C2BA" />
               </button>
             </div>
+
+            {/* Focus chips — shown only when no conversation yet */}
+            {messages.length === 0 && !input && !streaming && (
+              <div style={{ padding: '10px 12px 6px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {FOCUS_CHIPS[page].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => { setInput(chip); setTimeout(() => inputRef.current?.focus(), 0) }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      fontSize: 11, fontWeight: 500,
+                      color: '#534AB7', background: '#EEEDFE',
+                      border: 'none', borderRadius: 20,
+                      padding: '4px 10px', cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.75')}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                  >
+                    ✦ {chip}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Chat thread */}
             {messages.length > 0 && (
@@ -658,15 +742,24 @@ export function KinlyBar({
                   color:     voice.listening ? '#EF9F27' : '#1A1A18',
                 }}
               />
+              {/* Camera in expanded input */}
+              <button
+                type="button"
+                onClick={handleCamera}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 0, flexShrink: 0 }}
+                title="Attach a photo or file"
+              >
+                <IconPhoto size={16} color="#C4C2BA" />
+              </button>
               {/* Mic button */}
               <button
                 type="button"
                 onClick={handleMic}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 0, flexShrink: 0 }}
-                title={voice.listening ? 'Stop listening' : 'Voice input'}
+                title={voice.listening ? 'Stop listening' : 'Talk to Kinly'}
               >
                 <IconMicrophone
-                  size={14}
+                  size={18}
                   color={voice.listening ? '#EF9F27' : '#C4C2BA'}
                   className={voice.listening ? 'animate-pulse' : ''}
                 />
