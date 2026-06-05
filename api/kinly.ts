@@ -2,6 +2,7 @@
 // Vercel Edge Function. Receives { messages, context } via POST, calls Groq
 // with the server-side GROQ_API_KEY, and streams the SSE response back.
 // The client-side bundle never sees the API key this way.
+/// <reference types="node" />
 
 export const config = { runtime: 'edge' }
 
