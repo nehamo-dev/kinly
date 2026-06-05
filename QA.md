@@ -1,286 +1,285 @@
 # Kinly QA Checklist
 
-Run every item before pushing. Add new cases whenever a bug is reported or a feature ships.
+Run every **P0** item before every deploy. Run **P1** before any major release or when the relevant area changes.
 
-**P0** = must pass before every deploy — core flows and security  
-**P1** = run before major releases or when the relevant area changes
+**P0** = must pass before every push  
+**P1** = run before releases / when area is touched
 
 ---
 
-## P0 — Critical (run before every deploy)
+## P0 — Critical (every deploy)
 
 ---
 
 ### 1. Build
 
-- [ ] `npm run build` exits 0 with zero TypeScript errors
+- [ ] `npm run build` exits 0 — zero TypeScript errors
 - [ ] `dist/` contains `index.html` and hashed JS/CSS assets
-- [ ] No `console.error` warnings in the browser on load (open DevTools before loading)
+- [ ] Browser DevTools shows no `console.error` on page load
 
 ---
 
-### 2. Welcome screen
+### 2. Auth — demo mode
 
-**Layout — two-column split (≥768px)**
-- [ ] Left panel: dark background (#1A1A18), "kinly" wordmark + amber inline dot
-- [ ] Left panel: tagline "For families who have **a lot** going on." (amber "a lot"), sub-copy visible
-- [ ] Left panel: "Trusted by 10,000+ families" trust badge at bottom
-- [ ] Right panel: warm parchment background (#F7F4EF), max-width 340px form area
-- [ ] Vertical divider between panels; no card border or drop shadow on the form
-
-**Layout — mobile (<768px)**
-- [ ] Left panel collapses to slim bar at top (logo only, tagline + badge hidden)
-- [ ] Form fills remaining viewport height; no horizontal overflow
-
-**Form elements**
-- [ ] "Continue with Google" button visible (white, bordered, Google SVG icon)
-- [ ] "or use email" divider visible between Google button and email field
-- [ ] Email label "EMAIL" in small-caps 11px above input
-- [ ] Email input focus ring turns purple (#AFA9EC)
-- [ ] "Send magic link" button: dark (#1A1A18) background, IconSend icon
-- [ ] Clicking "Send magic link" with a valid email replaces the button with "Check your inbox — link sent ✓" (no separate confirmation screen)
-- [ ] Demo button: purple-tint background (#EEEDFE), label "See it with a real family's week", IconSparkles icon
-- [ ] Demo button caption: "No account needed · resets after 24 hours"
-- [ ] Terms line at bottom: "By continuing you agree to our Terms and Privacy Policy. We never sell your data. Ever."
-- [ ] Hard-refresh on `/welcome` does NOT 404 (SPA rewrite in vercel.json)
-
-**Loading states**
-- [ ] Clicking "Send magic link" shows a spinning indicator inside the button while request is in flight
-- [ ] Clicking "See it with a real family's week" shows a spinning indicator inside the button while seeding
+- [ ] `/welcome` loads without 404 (hard-refresh)
+- [ ] "See it with a real family's week" seeds demo data and navigates to `/`
+- [ ] Hard-refresh on `/` while in demo stays on home feed (session persists)
+- [ ] All 5 nav items render: today · family · calendar · home · inbox
+- [ ] Hard-refresh on `/family`, `/calendar`, `/home`, `/inbox` does **not** 404
 
 ---
 
-### 3. Demo mode — seed flow
+### 3. KinlyBar — visual / layout
 
-- [ ] Clicking "✦ Try with demo data" creates an anonymous Supabase session, seeds demo data, and navigates to home feed
-- [ ] Home feed renders with all demo data: 5 tasks, 3 events today, occasions, members
-- [ ] Demo banner appears at the top: "Demo mode. Data resets after 24 hours."
-- [ ] Hard-refresh (⌘R) stays on home feed — anonymous session + family ID persist in localStorage ('kinly-family-id' key)
-- [ ] Clicking "Sign up to save your data →" in the demo banner clears localStorage and goes to /welcome
-- [ ] TopNav shows the smiley logo + "Kinly" wordmark in tomato red
-- [ ] "Today" nav item shows active pill state (bg-slate-100)
-- [ ] User avatar visible in top-right corner
-- [ ] Checking off a task toggles it in Supabase and refreshes the feed
-
----
-
-### 4. Home — redesigned layout (HeroHeader + two columns)
-
-- [ ] No PageWrapper/white card — body background is warm parchment #F7F4EF
-- [ ] **HeroHeader** spans full width, dark background #1A1A18, sits directly below TopNav
-- [ ] Greeting text: "Good morning/afternoon/evening. [Headline]." — correct time-of-day variant
-- [ ] Headline updates with task count: "Nothing urgent today." / "One thing for you." / "Two things need you." etc.
-- [ ] Event chip strip appears when today has events; chips show time + icon (car, music, calendar)
-- [ ] Input bar: `#2C2C2A` bg, sparkle icon left, rotating placeholder text cycles every ~2.6s with fade
-- [ ] Typing in the input bar and pressing Enter fires a query (no error in demo without GROQ key — shows "Add VITE_GROQ_API_KEY" message)
-- [ ] With `VITE_GROQ_API_KEY` set: submitting a query shows `KinlyPanel` below the hero with an AI response
-- [ ] KinlyPanel shows the original query in italics, a sparkle icon, and the response text
-- [ ] Dismissing KinlyPanel (✕ button) hides it and clears the query
-- [ ] **Left column** (55%) has background #F7F4EF, right column (45%) has #FDFCF9
-- [ ] Thin 0.5px vertical divider between the two columns
-- [ ] Section headers are small caps (11px uppercase tracking-widest muted): "ALL CAUGHT UP", "YOUR WEDNESDAY", etc.
-- [ ] Left col — section headline reflects task count: "a couple things for you" for 2 tasks
-- [ ] Right col — section headline: "YOUR [day name]" (e.g. "YOUR WEDNESDAY")
-- [ ] **ActionCard** (per task): white card, 3px left border coloured by tag, title (13px) + time pill, subtitle muted text
-- [ ] ActionCard time pill: "overdue" (coral), "today" (amber), future date (muted)
-- [ ] Agent line shows purple (#EEEDFE/#3C3489) sparkle pill below subtitle when present (demo mode)
-- [ ] Clicking an ActionCard expands it; shows "Let Kinly handle it" dark button
-- [ ] **ScheduleCard** shows today's events as timeline rows; time is muted unless active event (amber)
-- [ ] Active/current event has 2px amber left border; past events (>90 min ago) are 35% opacity
-- [ ] Member chips on ScheduleCard: Lila → purple (#EEEDFE/#534AB7), Family sync → muted, Us/anniversary → pink
-- [ ] **ComingUpCard** shows upcoming occasions (label + date label); no left border; white card
-- [ ] "Coming up" section only visible when occasions exist
+- [ ] Dark banner (`#1A1A18`) runs full width on every screen
+- [ ] Content inside the bar is capped at **1200px** and centred — matches nav alignment
+- [ ] Collapsed state: amber-circle sparkle icon, rotating placeholder text, mic icon
+- [ ] Placeholder text fades and cycles every ~2.6 s
+- [ ] Clicking anywhere on the collapsed bar opens the expanded chat card
+- [ ] Expanded card: white bg, "Kinly · [page label]" header, ✕ close button
+- [ ] Clicking ✕ or pressing Escape closes the bar
+- [ ] Clicking outside the expanded card closes it
+- [ ] ⌘K / Ctrl+K opens the bar from any screen
 
 ---
 
-### 4b. Home feed — (legacy sections still present)
+### 4. KinlyBar — CRUD: add event
 
-- [ ] Section header shows "NEEDS ATTENTION 5" with a red dot (no "Snooze all" action)
-- [ ] "House cleaning overdue by 3 days" — `home` badge — urgency "Overdue" in red
-- [ ] Subline: "Bi-weekly cycle · last visit May 10 · Maria's Cleaning Co."
-- [ ] "Confirm Saturday babysitter" — `occasion` badge — urgency "Today" in green
-- [ ] Subline: "Jess Nguyen for anniversary dinner · text to confirm"
-- [ ] "Complete soccer registration" — `Lila` member badge + `urgent` badge — urgency "This week" in slate
-- [ ] Subline: "From seahawkssoccer.org · payment + medical form · closes Fri"
-- [ ] "Show 2 more ↓" link visible (Plan Noah's birthday + HVAC not shown initially)
-- [ ] Clicking "Show 2 more" reveals the remaining 2 tasks
-- [ ] Each task row shows a clock (snooze) icon to the right of the urgency label
-- [ ] Clicking the clock shows a popover: "→ Tomorrow" and "→ Next week"
-- [ ] Selecting "Tomorrow" updates due_date to tomorrow; task re-sorts/refreshes
-- [ ] Selecting "Next week" updates due_date to +7 days; task re-sorts/refreshes
-- [ ] Clicking a task's title/content area opens the Edit Task modal
-- [ ] Edit Task modal is pre-filled with current title, due date, and tag
-- [ ] Saving edits updates the task in Supabase and refreshes the feed
-- [ ] Delete button in Edit Task modal removes the task from Supabase
+**Test prompt:** `"Add Lila's soccer game this Saturday at 10am"`
+
+- [ ] Kinly responds with natural-language confirmation
+- [ ] A green **✓ "…added to calendar"** action pill appears in the response bubble
+- [ ] Navigating to `/calendar` shows the new event on Saturday
+- [ ] Event has correct title, date, and time
+- [ ] No RLS error in the action pill
+- [ ] `onActionExecuted` fires — calendar data reloads automatically (no manual refresh needed)
+
+**Edge cases**
+- [ ] "Add team meeting tomorrow at 2pm" — relative date resolves to correct date
+- [ ] "Block Thursday afternoon" — creates a calendar block event
+- [ ] Sending an ambiguous prompt without enough info — Kinly asks a clarifying question and does **not** emit an `[ACTION:]` tag prematurely
 
 ---
 
-### 5. Home feed — Today's Schedule section
+### 5. KinlyBar — CRUD: add task
 
-- [ ] Section header shows "TODAY'S SCHEDULE 3" with a red dot
-- [ ] "Family morning sync" — `daily` badge — subline "15 min · review the day's plan over coffee"
-- [ ] "School pickup — Lila" — `Lila` member badge — subline "Cedar Crest north gate · 1.2 mi"
-- [ ] "Piano lesson" — `Lila` member badge — subline "Ms. Chen · Studio B · recurring weekly"
-- [ ] Time column shows correct format: "9:00 am", "3:15 pm", "4:00 pm"
-- [ ] Tapping any event row opens the Event Detail modal
-- [ ] Event Detail modal shows: formatted time, title, badges, subline, date, source label
-- [ ] Closing the modal (× or backdrop click) returns to feed
+**Test prompt:** `"Remind me to call the school about Lila's form by Friday"`
 
----
+- [ ] Kinly responds with confirmation text
+- [ ] A green **✓ "…added to your tasks"** action pill appears
+- [ ] Navigating to `/` shows the new task in the NEEDS YOU or ON THE HORIZON section
+- [ ] Task has correct title and due date
+- [ ] No RLS error (`new row violates row-level security policy for table "tasks"`)
+- [ ] `onActionExecuted` fires — today feed reloads
 
-### 6. Home feed — Flagged Emails section
-
-- [ ] Section header shows "FLAGGED EMAILS 4"
-- [ ] "Parent info night — please RSVP" — `Lila` member badge — timestamp "9:14am"
-- [ ] Domain/preview format: "cedarcrestacademy.org — Tonight at 6:30 in the auditorium…"
-- [ ] "Spring registration closes Friday" — `urgent` badge — timestamp "7:02am"
-- [ ] "HVAC seasonal service reminder" — `home` badge — timestamp "Mon"
-- [ ] "Show 1 more ↓" link visible (weekly grocery delivery hidden initially)
-- [ ] Each email shows a "+ Add as task" button below the preview line
-- [ ] Clicking "+ Add as task" opens a modal pre-filled with the email subject
-- [ ] Saving creates a task with `tag: 'gmail'` and the chosen due date; feed refreshes
+**Edge cases**
+- [ ] `"Add HVAC service appointment"` (no date) — task created with null due_date, appears in ON THE HORIZON
+- [ ] `"urgent: pay school fees today"` — `tag: urgent`, due_date = today, appears in NEEDS YOU with amber pill
 
 ---
 
-### 7. Command bar — natural language input
+### 6. KinlyBar — CRUD: add member
 
-- [ ] Input field is editable (no longer readOnly); placeholder text visible
-- [ ] Voice icon and send arrow button (dark rounded square) visible
-- [ ] "✦ Plan my week", "📅 Add event", "✓ Add task" chips visible
-- [ ] "Add event" chip opens AddEventModal (empty)
-- [ ] "Add task" chip opens AddTaskModal (empty)
-- [ ] "Plan my week" chip seeds the input field with "Plan my week" and focuses it
-- [ ] **Natural language — event:** type "Piano lesson on Friday at 4pm" + Enter → AddEventModal opens with title "Piano lesson", correct Friday date, time "04:00 PM" pre-filled
-- [ ] **Natural language — task:** type "Buy birthday cake tomorrow" + Enter → AddTaskModal opens with title "Buy birthday cake", tomorrow's date, tag "occasion" pre-filled
-- [ ] **Natural language — date only:** type "Call the plumber next Monday" + Enter → AddTaskModal opens with title "Call the plumber", next Monday's date
-- [ ] **Natural language — time triggers event:** any phrase with "at [time]" opens AddEventModal (not AddTaskModal)
-- [ ] Sending with empty input does nothing (no modal opens)
-- [ ] After saving from command bar, the feed refreshes automatically
-- [ ] AddEventModal: title + date + time fields + Save button saves to Supabase; event appears in Today's Schedule if date is today
-- [ ] AddTaskModal: title + due date + tag fields + Save button saves to Supabase; task appears in Needs Attention
+**Test prompt:** `"Add my mum Linda, she's 62 and helps with school pickup"`
+
+- [ ] Kinly responds with extraction confirmation
+- [ ] A green **✓ "Linda added to your family"** action pill appears
+- [ ] Navigating to `/family` shows Linda's member card
+- [ ] Card shows her name and correct role
+- [ ] No RLS error (`new row violates row-level security policy for table "members"`)
+- [ ] `onActionExecuted` fires — family data reloads
+
+**Edge cases**
+- [ ] Child: `"My son Noah is 6, goes to Cedar Crest"` — role `child`, school populated, blue avatar colour
+- [ ] Caregiver: `"Add Jess, she babysits on weekends"` — role `caregiver`
 
 ---
 
-### 8. Navigation
+### 7. KinlyBar — action pill error states
 
-- [ ] All 5 nav items visible: Today, Family, Calendar, Home, Inbox
-- [ ] Clicking "Family" navigates to /family (full screen, not stub)
-- [ ] Clicking "Calendar" navigates to /calendar (full week view, not stub)
-- [ ] Clicking "Home" navigates to /home
-- [ ] Clicking "Inbox" navigates to /inbox
-- [ ] Hard-refresh on any of the above routes does NOT 404 on Vercel
-- [ ] Clicking "Today" (or logo) returns to home feed
-- [ ] Active nav item has pill highlight
+- [ ] If Groq is unavailable: input shows `"Kinly is thinking…"` placeholder; error is surfaced gracefully (no silent fail)
+- [ ] If a Supabase write fails: action pill shows **× [error message]** in salmon/red, not a JS throw
+- [ ] If `VITE_GROQ_API_KEY` is missing: bar still opens; response shows a readable error, not a blank bubble
 
 ---
 
-### 9. Auth — session persistence
+### 8. KinlyBar — pill prefill (today screen)
 
-- [ ] After demo login, hard-refresh (⌘R) returns to home feed (not Welcome)
-- [ ] Auth loading spinner (small red spinner) appears briefly on refresh, then resolves within 5 seconds
-- [ ] After 5 seconds maximum, the app always unblocks (failsafe timeout)
+- [ ] In demo mode, action cards show agent lines (e.g. "Kinly can reschedule Maria")
+- [ ] Clicking an agent line pill **opens KinlyBar** and **prefills** the relevant query
+- [ ] No KinlyPanel overlay appears (that component is removed)
+- [ ] The prefilled query is editable before sending
 
 ---
 
-### 10. Vercel production checks
+### 9. Today screen — layout
+
+- [ ] Page background is `#ffffff`
+- [ ] Greeting: "Good morning/afternoon/evening." — correct time of day
+- [ ] Headline italic: "N things need you." / "one thing needs you." / "you're all caught up."
+- [ ] Event chip strip visible when today has events; each chip shows icon + label + time
+- [ ] **NEEDS YOU** section label visible (9px uppercase)
+- [ ] Overdue tasks show coral `Overdue` pill; today tasks show amber `Today`; future tasks show date
+- [ ] Agent line buttons (amber `#faecd0`) appear on demo tasks
+- [ ] **ON THE HORIZON** divider with trailing line visible when future tasks exist
+- [ ] Desktop (≥ lg): two-column layout — tasks left, schedule right
+- [ ] Tablet/mobile: schedule strip appears below tasks, not in a right column
+- [ ] **YOUR [day name]** section on right column (desktop) or below tasks (tablet)
+- [ ] Schedule strip shows events as horizontal cards with time and title
+- [ ] **COMING UP** occasions section visible on right column when data exists
+- [ ] Skeleton cards shown while loading (3 grey bars)
+
+---
+
+### 10. Today screen — CRUD via page
+
+- [ ] Agent line pill click → KinlyBar opens prefilled → submitting creates the expected record (see §4–6)
+- [ ] After Kinly action, tasks/events reload without full page refresh
+
+---
+
+### 11. Calendar screen — layout
+
+- [ ] Page renders at `/calendar` without 404
+- [ ] Dark header: "May 2026" (or current month), ← → week nav, "today" pill button
+- [ ] 7-day strip shows MON–SUN with event-category dots
+- [ ] Selected day: dark `#2C2C2A` pill, white text
+- [ ] Today (unselected): cream `#F7F4EF` pill
+- [ ] Past days: muted text
+- [ ] Clicking a day updates the event list below
+- [ ] Member filter chips visible: Lila · Noah · Family · Sarah · James + "+ add event"
+- [ ] Events grouped by date with date header (e.g. "FRIDAY, MAY 29 · TODAY")
+- [ ] Each event row: time | coloured left bar | title | member tag
+- [ ] Past events (~90 min ago) are 35% opacity
+- [ ] Active/next event: time displayed in amber
+- [ ] Scroll syncs selected day in the week strip
+
+---
+
+### 12. Calendar screen — CRUD
+
+- [ ] "+ add event" button prefills KinlyBar with calendar context
+- [ ] KinlyBar `add_event` action creates event (see §4); calendar reloads showing new row
+- [ ] "Kinly can draft questions to ask" / "Kinly can text Jess" agent buttons in demo are visible
+- [ ] Clicking agent button prefills KinlyBar
+
+---
+
+### 13. Family screen — layout
+
+- [ ] Page renders at `/family` without 404
+- [ ] Page background `#ffffff`; Lora serif heading "Your family."
+- [ ] Content capped at 760px centred
+- [ ] Member cards render in a `repeat(auto-fill, minmax(220px, 1fr))` grid
+- [ ] Each card: coloured top accent bar, avatar square, name, role label
+- [ ] Cards with school/DOB show icon + text in fields section
+- [ ] "Just added" cards pulse with coloured border for 4 s then settle
+- [ ] "Tell Kinly about someone new" add card visible as last item
+- [ ] Clicking add card opens and focuses KinlyBar
+- [ ] ⋯ dots menu: "Edit [name]" and "Remove [name]" options
+- [ ] Clicking "Edit" prefills KinlyBar input
+- [ ] Empty state (no members): prompt card with 3 example chips
+
+---
+
+### 14. Family screen — CRUD
+
+**Add member via KinlyBar `add_member` action**
+- [ ] Test: `"My daughter Lila is 8, Cedar Crest school"` → card appears, no RLS error (see §6)
+
+**Add member via parseMember (direct extraction)**
+- [ ] Typing `"Lila, 8, Cedar Crest"` in KinlyBar on family page → extraction panel shows in bubble
+- [ ] Member card animates in with coloured border
+- [ ] Hard-refresh — new member persists (stored in Supabase)
+
+---
+
+### 15. Home screen (`/home`) — layout
+
+- [ ] Page renders at `/home` without 404
+- [ ] KinlyBar visible with `home` page placeholders
+- [ ] Page content loads without JS errors
+
+---
+
+### 16. Navigation
+
+- [ ] TopNav: logo links to `/`; all 5 tabs navigate correctly
+- [ ] Active tab has `bg-white/10 text-white` pill
+- [ ] Mobile (`< sm`): bottom nav shows icons + labels; top nav tabs are hidden
+- [ ] Bell icon visible in top-right; avatar initials render from name/email
+
+---
+
+### 17. Session persistence
+
+- [ ] Demo: hard-refresh keeps session (localStorage `kinly-family-id` present)
+- [ ] Auth gate: if no session, redirect to `/welcome`; if session, skip welcome
+- [ ] Auth resolves within 5 s (failsafe timeout) — app never hangs on spinner
+
+---
+
+## P1 — Extended (before releases)
+
+---
+
+### 18. KinlyBar — voice input
+
+- [ ] Mic icon in collapsed bar and in expanded input row
+- [ ] Clicking mic requests microphone permission (browser prompt)
+- [ ] After granting: amber pulsing dot + "Listening — speak now" indicator appears
+- [ ] Speaking fills the input; clicking mic again stops listening
+- [ ] Transcript text is editable before sending
+
+---
+
+### 19. RLS regression checklist (run after any Supabase schema change)
+
+For each of the three action types, confirm **zero** RLS errors:
+
+| Action | Table | Required fields in insert | Expected result |
+|--------|-------|--------------------------|-----------------|
+| add_event | `events` | `family_id`, `title`, `date` | ✓ pill, event appears on calendar |
+| add_task  | `tasks`  | `family_id`, `user_id`, `title` | ✓ pill, task appears on today |
+| add_member | `members` | `family_id`, `user_id`, `name`, `role` | ✓ pill, card appears on family |
+
+- [ ] `add_event` — no RLS error
+- [ ] `add_task` — no RLS error (was broken: missing `user_id`)
+- [ ] `add_member` — no RLS error (was broken: missing `user_id`)
+- [ ] `parseMember` direct path in Family.tsx — no RLS error
+
+---
+
+### 20. Responsive layout
+
+- [ ] At 375px (iPhone SE): no horizontal overflow on any screen; bottom nav visible
+- [ ] At 768px (tablet): schedule strip shows below tasks (not sidebar); top nav tabs visible
+- [ ] At 1280px: content centred, KinlyBar and nav cap at 1200px; today screen at 1200px
+
+---
+
+### 21. Google OAuth (requires credentials)
+
+- [ ] "Continue with Google" initiates OAuth redirect
+- [ ] After auth, redirects to `/` or `/onboarding`
+- [ ] Google Calendar events sync to calendar screen
+
+---
+
+### 22. Vercel production
 
 - [ ] `https://kinly-six.vercel.app/welcome` loads (not 404)
-- [ ] `https://kinly-six.vercel.app/` redirects to `/welcome` if no session
-- [ ] All assets (JS bundle, CSS) return HTTP 200
-- [ ] No environment variable warnings in browser console (`[Kinly] Missing Supabase env vars`)
+- [ ] `https://kinly-six.vercel.app/` redirects to `/welcome` with no session
+- [ ] All JS/CSS assets return HTTP 200
+- [ ] No `Missing Supabase env vars` warning in browser console
+- [ ] `VITE_GROQ_API_KEY` present → Kinly responses stream correctly in production
 
 ---
 
-### 10b. Family screen — Kinly add-member input
+## Known regressions to re-test after every change to KinlyBar or kinlyActions.ts
 
-- [ ] Dark Kinly input bar at top of Family screen: "Tell Kinly about a family member..."
-- [ ] Typing text and pressing Enter (or →) shows a purple confirmation card below the input
-- [ ] Confirmation card shows parsed fields: "Lila · child · age 8 · Cedar Crest Academy"
-- [ ] "edit" button re-focuses the input with original text; confirmation card disappears
-- [ ] "add" button inserts a new member to Supabase and refreshes the Members section
-- [ ] "Member added." green success flash visible for ~2 seconds after confirm
-- [ ] Input accepts formats: "Lila, age 8" / "James, parent" / "Jess Nguyen, babysitter age 30"
-- [ ] Input clears after successful add
-- [ ] Hint text below bar: "Try: 'Lila, age 8, Cedar Crest Academy' or 'James, parent'"
-- [ ] Navigating to `/family` shows the Family screen (not a stub)
-- [ ] **Members** — section shows count; avatar + first name + role/grade/school for each member
-- [ ] Children (Lila, Noah) appear before parents (Sarah, James)
-- [ ] **Activities** — 3 activities: Piano lesson (Mon, Wed), Soccer practice (Tue, Thu), Swimming (Sat); each shows time range + location + member badge
-- [ ] **Upcoming Occasions** — 3 occasions sorted by date: Lila's birthday (in 21d, amber), Sarah & James Anniversary (in 42d, slate), Noah's birthday (in 70d, slate)
-- [ ] Occasions within 7 days show countdown in tomato red; 8–30 days amber; 30+ days slate
-- [ ] **Providers** — 3 providers: Maria's Cleaning Co. (5★), Jess Nguyen (5★), Ms. Chen (4★)
-- [ ] Provider type label shows ("Cleaner", "Babysitter", "Tutor")
-- [ ] Skeleton placeholders shown during initial load
-- [ ] Hard-refresh on `/family` does not 404
-
----
-
-### 10c. Calendar screen — horizontal strip redesign
-
-- [ ] Navigating to `/calendar` shows the Calendar screen (not a stub)
-- [ ] **Week navigation** — "← [range] →" header; `May 26–Jun 1` format; prev/next chevrons styled as muted rounded buttons
-- [ ] "+ Add event" button (top right) — dark rounded button; opens AddEventModal with today's date
-- [ ] **Member filter chips** — "All" + one chip per family member, each with a colored dot; only shown when members are loaded
-- [ ] Clicking a member chip filters the selected day's event list; clicking again deselects (back to "All")
-- [ ] **7-day strip** — rendered inside a `#F3F0EA` rounded container
-- [ ] Each day: 3-letter day name (muted small caps), day number, up to 3 color-coded event dots
-- [ ] Today's date: highlighted with a subtle `#E8E4DC` background when not selected
-- [ ] **Selected day**: dark `#1A1A18` background, light text, dots turn white/translucent
-- [ ] Clicking a different day in the strip updates the event list below
-- [ ] When week changes and selected date is outside new week, snaps to Monday of new week
-- [ ] **Selected day header**: "Wednesday, May 28" with "today" in muted text when applicable; small "+ add" button right
-- [ ] **Event cards** for selected day: white card, 3px left border coloured by member avatar_color (teal fallback for no member), time + title + member chip
-- [ ] Tapping an event card opens `EventDetailModal`
-- [ ] "Nothing scheduled." shown when selected day has no events
-- [ ] With member filter active + no matching events: "No events for this person today."
-- [ ] Skeleton (3 grey bars) shown while loading
-- [ ] Hard-refresh on `/calendar` does not 404
-
----
-
-## P1 — Extended (run before major releases)
-
----
-
-### 11. Onboarding flow (new real account)
-
-- [ ] After magic link click, `/auth/callback` redirects to `/onboarding`
-- [ ] Onboarding wizard: step 1 (family name) → step 2 (add members) → step 3 (features) completes
-- [ ] After onboarding, redirects to `/` home feed
-- [ ] No demo data shown for real accounts
-
----
-
-### 12. Brand / design
-
-- [ ] All accent colours are tomato red #E8392A — no leftover green (#1D9E75)
-- [ ] No Tailwind `emerald-*` classes on visible elements
-- [ ] Badge colours: kid=sky, home=amber, occasion=purple, urgent=red, gmail=orange, daily=slate
-- [ ] Task ring circles: correct colour per tag (amber for home/urgent, purple for occasion, sky for kid)
-- [ ] Member badges render correctly inline next to task/event titles
-- [ ] Urgency labels: "Overdue" red, "Today" green, "This week" slate
-
----
-
-### 13. Responsive layout
-
-- [ ] Home feed readable at 375px (iPhone SE width) — no horizontal overflow
-- [ ] TopNav items don't overflow at 375px
-- [ ] Home feed readable at 1280px — content stays centred in max-w-[860px] column
-- [ ] Command bar wraps gracefully at narrow widths
-
----
-
-### 14. Google OAuth (requires Google credentials set)
-
-- [ ] "Continue with Google" initiates OAuth flow and redirects to Google
-- [ ] After Google auth, redirects back to `/` or `/onboarding`
-- [ ] Google Calendar settings page accessible at `/settings/calendar`
-
----
-
-### 15. Error states
-
-- [ ] Entering invalid email in magic link form shows a Supabase error message
-- [ ] If Supabase is unreachable, app unblocks within 5 seconds (failsafe)
-- [ ] Demo seed failure shows a readable error message (not "[object Object]")
+1. **RLS on tasks** — insert must include `user_id`
+2. **RLS on members** — insert must include `user_id` (both `kinlyActions.ts` and `Family.tsx` direct path)
+3. **Pill prefill** — clicking agent lines opens KinlyBar, not KinlyPanel (KinlyPanel is removed)
+4. **Max-width** — KinlyBar content stays at 1200px, never stretches on wide viewports
+5. **Action parsing** — `[ACTION:{...}]` tag stripped from displayed text; only clean text shown in bubble
