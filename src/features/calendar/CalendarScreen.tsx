@@ -102,7 +102,8 @@ interface HeaderProps {
 function CalendarHeader({ selectedDate, weekDaysList, dotMap, onDaySelect, onPrev, onNext, onToday }: HeaderProps) {
   const monthLabel = format(weekDaysList[0], 'MMMM yyyy')
   return (
-    <div style={{ background: '#1A1A18', padding: '16px 28px 18px', flexShrink: 0 }}>
+    <div style={{ background: '#1A1A18', padding: '16px 0 18px', flexShrink: 0 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
       {/* Row 1 — month + nav */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
@@ -177,6 +178,7 @@ function CalendarHeader({ selectedDate, weekDaysList, dotMap, onDaySelect, onPre
           )
         })}
       </div>
+      </div>{/* end inner centred container */}
     </div>
   )
 }
@@ -486,14 +488,15 @@ export function CalendarScreen() {
         onToday={goToday}
       />
 
-      {/* Body grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 268px', flex: 1, overflow: 'hidden' }}>
+      {/* Body grid — capped at 1200px to match nav + KinlyBar */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 268px', width: '100%', maxWidth: 1200, overflow: 'hidden' }}>
 
         {/* EventList */}
         <div
           ref={listRef}
           onScroll={handleScroll}
-          style={{ overflowY: 'auto', padding: '22px 28px 40px', borderRight: '0.5px solid #E8E4DC', background: '#FFFFFF' }}
+          style={{ overflowY: 'auto', padding: '22px 20px 40px', borderRight: '0.5px solid #E8E4DC', background: '#FFFFFF' }}
         >
           {loading ? (
             <div className="flex flex-col gap-3">
@@ -534,6 +537,7 @@ export function CalendarScreen() {
           isDemo={isDemo}
         />
       </div>
+      </div>{/* end max-width wrapper */}
 
     </div>
   )

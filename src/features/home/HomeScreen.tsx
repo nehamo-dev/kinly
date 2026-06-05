@@ -279,9 +279,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p
       style={{
-        fontSize: 11,
-        color: '#B4B2A9',
-        letterSpacing: '0.08em',
+        fontSize: 9,
+        color: '#bbbbbb',
+        letterSpacing: '0.07em',
         textTransform: 'uppercase',
         fontWeight: 500,
         marginBottom: 10,
@@ -355,7 +355,7 @@ export function HomeScreen() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: 'calc(100vh - 52px)',
-        background: '#F7F4EF',
+        background: '#ffffff',
       }}
     >
       {/* KinlyBar */}
@@ -367,19 +367,21 @@ export function HomeScreen() {
       />
 
       {/* Page header */}
-      <div style={{ padding: '22px 28px 0' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', padding: '22px 20px 0' }}>
         <h1
           style={{
-            fontSize: 18,
-            fontWeight: 500,
-            color: '#1A1A18',
-            letterSpacing: '-0.3px',
+            fontFamily: 'Lora, serif',
+            fontSize: 22,
+            fontWeight: 400,
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.25,
             margin: 0,
           }}
         >
-          Your home
+          Your home.
         </h1>
-        <p style={{ fontSize: 12, color: '#B4B2A9', marginTop: 3, marginBottom: 20 }}>
+        <p style={{ fontSize: 12, color: '#b0b0b0', marginTop: 4, marginBottom: 20 }}>
           Services, maintenance and shopping.
         </p>
       </div>
@@ -387,11 +389,13 @@ export function HomeScreen() {
       {/* Content */}
       <div
         style={{
-          padding: '0 28px 40px',
+          maxWidth: 760,
+          margin: '0 auto',
+          width: '100%',
+          padding: '0 20px 40px',
           display: 'flex',
           flexDirection: 'column',
           gap: 28,
-          maxWidth: 680,
         }}
       >
         {/* Services */}

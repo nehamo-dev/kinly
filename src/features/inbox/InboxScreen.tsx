@@ -229,7 +229,7 @@ export function InboxScreen() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: 'calc(100vh - 52px)',
-        background: '#F7F4EF',
+        background: '#ffffff',
       }}
     >
       {/* KinlyBar */}
@@ -239,27 +239,29 @@ export function InboxScreen() {
       />
 
       {/* Page header */}
-      <div style={{ padding: '22px 28px 0' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', padding: '22px 20px 0' }}>
         <h1
           style={{
-            fontSize: 18,
-            fontWeight: 500,
-            color: '#1A1A18',
-            letterSpacing: '-0.3px',
+            fontFamily: 'Lora, serif',
+            fontSize: 22,
+            fontWeight: 400,
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.25,
             margin: 0,
           }}
         >
-          Your inbox
+          Your inbox.
         </h1>
-        <p style={{ fontSize: 12, color: '#B4B2A9', marginTop: 3, marginBottom: 20 }}>
+        <p style={{ fontSize: 12, color: '#b0b0b0', marginTop: 4, marginBottom: 20 }}>
           {isDemo
             ? 'Emails Kinly flagged as relevant to your family.'
-            : 'Emails Kinly thinks matter to your family.'}
+            : 'Connect Gmail so Kinly can flag emails that matter to your family.'}
         </p>
       </div>
 
       {/* Content */}
-      <div style={{ padding: '0 28px 28px', maxWidth: 680 }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', padding: '0 20px 40px' }}>
         {emails.length === 0 ? (
           <EmptyInbox />
         ) : (

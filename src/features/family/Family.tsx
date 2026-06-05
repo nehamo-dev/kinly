@@ -577,7 +577,7 @@ export function Family() {
       />
 
       {/* Centered content */}
-      <div style={{ maxWidth: 760, margin: '0 auto', width: '100%', padding: '22px 20px 0' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', width: '100%', padding: '22px 20px 0' }}>
         {/* Page header */}
         <h1
           style={{
@@ -608,7 +608,7 @@ export function Family() {
       <div
         ref={rosterRef}
         style={{
-          maxWidth: 760,
+          maxWidth: 900,
           margin: '0 auto',
           width: '100%',
           padding: '0 20px 40px',
