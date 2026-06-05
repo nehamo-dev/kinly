@@ -228,7 +228,7 @@ export function InboxScreen() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 'calc(100vh - 52px)',
+        minHeight: 'calc(100vh - 52px)', paddingBottom: 80,
         background: '#ffffff',
       }}
     >

@@ -226,7 +226,7 @@ export function Home() {
   }
 
   return (
-    <div style={{ background: '#ffffff', minHeight: 'calc(100vh - 52px)', paddingBottom: 64 }}>
+    <div style={{ background: '#ffffff', minHeight: 'calc(100vh - 52px)', paddingBottom: 80 }}>
 
       {/* KinlyBar */}
       <KinlyBar
@@ -316,25 +316,50 @@ export function Home() {
             </div>
           )}
 
-          {/* Tablet + Mobile: schedule strip below tasks */}
+          {/* Tablet + Mobile: schedule strip + occasions below tasks */}
           <div className="lg:hidden" style={{ marginTop: 20 }}>
             <SectionLabel>your {todayDayName.toLowerCase()}</SectionLabel>
-            <ScheduleStrip
-              events={events}
-              members={members}
-              isDemo={isDemo}
-              scrollable={false}
-            />
 
-            {/* Mobile: scrollable override via inline class */}
-            <style>{`
-              @media (max-width: 639px) {
-                .schedule-strip-wrap { overflow-x: auto; scrollbar-width: none; }
-              }
-              @media (min-width: 640px) {
-                .schedule-strip-wrap { overflow-x: visible; }
-              }
-            `}</style>
+            {/* Mobile (<sm): horizontally scrollable cards */}
+            <div className="sm:hidden">
+              <ScheduleStrip
+                events={events}
+                members={members}
+                isDemo={isDemo}
+                scrollable={true}
+              />
+            </div>
+
+            {/* Tablet (sm → lg): fill-width cards */}
+            <div className="hidden sm:block">
+              <ScheduleStrip
+                events={events}
+                members={members}
+                isDemo={isDemo}
+                scrollable={false}
+              />
+            </div>
+
+            {/* Coming up — mobile/tablet (desktop gets it in the right sidebar) */}
+            {!scheduleLoading && occasions.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <SectionLabel>coming up</SectionLabel>
+                {occasions.slice(0, 3).map((occ) => (
+                  <div key={occ.id} style={{
+                    display:        'flex',
+                    justifyContent: 'space-between',
+                    alignItems:     'center',
+                    padding:        '6px 0',
+                    borderBottom:   '0.5px solid #f5f5f5',
+                  }}>
+                    <span style={{ fontSize: 11, color: '#1a1a1a' }}>{occ.label}</span>
+                    <span style={{ fontSize: 10, color: '#bbbbbb', flexShrink: 0 }}>
+                      {occasionDateLabel(occ.date)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
