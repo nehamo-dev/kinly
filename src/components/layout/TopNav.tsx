@@ -6,10 +6,10 @@ import { useAuthStore } from '../../store/authStore'
 
 const navItems = [
   { to: '/',         label: 'today',    icon: IconHome2 },
-  { to: '/family',   label: 'family',   icon: IconUsers },
   { to: '/calendar', label: 'calendar', icon: IconCalendar },
   { to: '/home',     label: 'home',     icon: IconBuilding },
   { to: '/inbox',    label: 'inbox',    icon: IconInbox },
+  { to: '/family',   label: 'family',   icon: IconUsers },
 ]
 
 export function TopNav() {
