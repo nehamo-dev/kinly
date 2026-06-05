@@ -509,11 +509,13 @@ export function Family() {
       : null
 
     const color = parsed.role === 'child' ? '#AFA9EC' : '#5DCAA5'
+    const uid   = (await supabase.auth.getUser()).data.user?.id ?? null
 
     const { data: inserted } = await supabase
       .from('members')
       .insert({
         family_id:     familyId,
+        user_id:       uid,
         name:          parsed.name,
         role:          parsed.role === 'child' ? 'child' : 'parent',
         date_of_birth: dob,

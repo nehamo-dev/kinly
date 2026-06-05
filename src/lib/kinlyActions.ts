@@ -110,8 +110,10 @@ export async function executeKinlyAction(
         ? format(new Date(new Date().getFullYear() - action.age, 6, 1), 'yyyy-MM-dd')
         : null
       const color = action.role === 'child' ? '#AFA9EC' : '#5DCAA5'
+      const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id ?? null
       const { error } = await supabase.from('members').insert({
         family_id:     familyId,
+        user_id:       resolvedUserId,
         name:          action.name,
         role:          action.role,
         date_of_birth: dob,
