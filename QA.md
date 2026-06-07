@@ -19,12 +19,17 @@ Run every **P0** item before every deploy. Run **P1** before any major release o
 
 ---
 
-### 2. Auth — demo mode
+### 2. Auth — sign-in page + demo mode
 
 - [ ] `/welcome` loads without 404 (hard-refresh)
+- [ ] **Two-column layout** at ≥768px: dark `#1A1A18` left panel + warm `#F7F4EF` right form panel
+- [ ] **Mobile** (<768px): left panel collapses to slim top bar (logo only); form fills height
+- [ ] Left panel: "kinly" wordmark + amber dot, tagline with amber "a lot", trust badge visible
+- [ ] Right panel: "Continue with Google" button, divider, email input, "Send magic link" button
+- [ ] Email submit → button replaced inline with "Check your inbox — link sent ✓" (green, 13px)
 - [ ] "See it with a real family's week" seeds demo data and navigates to `/`
 - [ ] Hard-refresh on `/` while in demo stays on home feed (session persists)
-- [ ] All 5 nav items render: today · family · calendar · home · inbox
+- [ ] All 5 nav items render in order: **today · calendar · home · inbox · family** (family is last)
 - [ ] Hard-refresh on `/family`, `/calendar`, `/home`, `/inbox` does **not** 404
 
 ---
@@ -34,12 +39,14 @@ Run every **P0** item before every deploy. Run **P1** before any major release o
 - [ ] Dark banner (`#1A1A18`) runs full width on every screen
 - [ ] Content inside the bar is capped at **1200px** and centred — matches nav alignment
 - [ ] Collapsed state: amber-circle sparkle icon, rotating placeholder text, mic icon
-- [ ] Placeholder text fades and cycles every ~2.6 s
+- [ ] Placeholder text fades and cycles every ~4 s
 - [ ] Clicking anywhere on the collapsed bar opens the expanded chat card
 - [ ] Expanded card: white bg, "Kinly · [page label]" header, ✕ close button
 - [ ] Clicking ✕ or pressing Escape closes the bar
 - [ ] Clicking outside the expanded card closes it
 - [ ] ⌘K / Ctrl+K opens the bar from any screen
+- [ ] **Focus chips** — when bar opens with no prior messages, 2–3 page-specific suggestion chips appear (e.g. "What's today looking like?" on Today; "What's on this week?" on Calendar; "Add a family member" on Family)
+- [ ] Clicking a focus chip populates the input with that text
 
 ---
 
@@ -126,7 +133,10 @@ Run every **P0** item before every deploy. Run **P1** before any major release o
 - [ ] Tablet/mobile: schedule strip appears below tasks, not in a right column
 - [ ] **YOUR [day name]** section on right column (desktop) or below tasks (tablet)
 - [ ] Schedule strip shows events as horizontal cards with time and title
-- [ ] **COMING UP** occasions section visible on right column when data exists
+- [ ] **COMING UP** occasions section visible on **mobile and tablet** (below schedule strip), not only desktop
+- [ ] On mobile (<sm): schedule strip is **horizontally scrollable** (overflow-x)
+- [ ] On tablet (sm→lg): schedule strip fills full width (not scrollable)
+- [ ] **Occasion row tap** → KinlyBar opens prefilled with "Help me plan for [label]"
 - [ ] Skeleton cards shown while loading (3 grey bars)
 
 ---
@@ -156,12 +166,16 @@ Run every **P0** item before every deploy. Run **P1** before any major release o
 
 ---
 
-### 12. Calendar screen — CRUD
+### 12. Calendar screen — CRUD + tap-to-prefill
 
 - [ ] "+ add event" button prefills KinlyBar with calendar context
 - [ ] KinlyBar `add_event` action creates event (see §4); calendar reloads showing new row
 - [ ] "Kinly can draft questions to ask" / "Kinly can text Jess" agent buttons in demo are visible
 - [ ] Clicking agent button prefills KinlyBar
+- [ ] **Event card tap** → KinlyBar opens prefilled with `Tell me about "[title]" at [time]`
+- [ ] Event card shows pointer cursor and hover bg `#FAFAF8` on mouse-over
+- [ ] **Sidebar "coming up" occasion tap** → KinlyBar opens prefilled with `Help me plan for [label]`
+- [ ] Occasion card shows pointer cursor and hover bg on mouse-over
 
 ---
 
@@ -253,8 +267,12 @@ For each of the three action types, confirm **zero** RLS errors:
 ### 20. Responsive layout
 
 - [ ] At 375px (iPhone SE): no horizontal overflow on any screen; bottom nav visible
+- [ ] At 375px: schedule strip scrolls horizontally (cards don't wrap or overflow page)
+- [ ] At 375px: "coming up" occasions visible below schedule strip
 - [ ] At 768px (tablet): schedule strip shows below tasks (not sidebar); top nav tabs visible
+- [ ] At 768px: occasions still visible (not hidden in desktop-only column)
 - [ ] At 1280px: content centred, KinlyBar and nav cap at 1200px; today screen at 1200px
+- [ ] All screens: paddingBottom ≥ 80px — content not cut off behind bottom nav
 
 ---
 
@@ -272,7 +290,9 @@ For each of the three action types, confirm **zero** RLS errors:
 - [ ] `https://kinly-six.vercel.app/` redirects to `/welcome` with no session
 - [ ] All JS/CSS assets return HTTP 200
 - [ ] No `Missing Supabase env vars` warning in browser console
-- [ ] `VITE_GROQ_API_KEY` present → Kinly responses stream correctly in production
+- [ ] Kinly responses stream correctly — Groq key is **server-side only** (`GROQ_API_KEY` env var on Vercel, never `VITE_GROQ_API_KEY`)
+- [ ] No `GROQ_API_KEY not configured on server` error in KinlyBar
+- [ ] `VITE_GROQ_API_KEY` is **absent** from Vercel Production/Preview env vars (it was removed for security)
 
 ---
 
@@ -283,3 +303,6 @@ For each of the three action types, confirm **zero** RLS errors:
 3. **Pill prefill** — clicking agent lines opens KinlyBar, not KinlyPanel (KinlyPanel is removed)
 4. **Max-width** — KinlyBar content stays at 1200px, never stretches on wide viewports
 5. **Action parsing** — `[ACTION:{...}]` tag stripped from displayed text; only clean text shown in bubble
+6. **Event card tap** — calendar event cards still tappable and prefill KinlyBar (if EventCard or DayGroup props change)
+7. **Occasion tap** — "coming up" rows in Home and Calendar sidebar still prefill KinlyBar
+8. **Groq proxy** — if `api/kinly.ts` changes, confirm streaming still works in production (server-side key)
