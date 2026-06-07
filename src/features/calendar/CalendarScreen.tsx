@@ -198,9 +198,11 @@ interface EventCardProps {
   ev: FamilyEvent
   members: Member[]
   isCurrent: boolean
+  onKinlyClick?: () => void
 }
 
-function EventCard({ ev, members, isCurrent }: EventCardProps) {
+function EventCard({ ev, members, isCurrent, onKinlyClick }: EventCardProps) {
+  const [hovered, setHovered] = useState(false)
   const cat    = getCategory(ev, members)
   const label  = memberLabel(ev, members)
   const past   = isEventPast(ev)
@@ -209,15 +211,18 @@ function EventCard({ ev, members, isCurrent }: EventCardProps) {
   return (
     <div
       className="flex items-start gap-3 transition-colors"
+      onClick={onKinlyClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: '#fff',
+        background: hovered && onKinlyClick ? '#FAFAF8' : '#fff',
         border: '0.5px solid #E8E4DC',
         borderLeft: `3px solid ${border}`,
         borderRadius: '0 10px 10px 0',
         padding: '11px 15px',
         marginBottom: 7,
         opacity: past ? 0.4 : 1,
-        cursor: 'default',
+        cursor: onKinlyClick ? 'pointer' : 'default',
       }}
     >
       <span style={{ fontSize: 12, fontWeight: 500, color: '#666460', minWidth: 44, flexShrink: 0, paddingTop: 2 }}>
@@ -243,9 +248,10 @@ interface DayGroupProps {
   members: Member[]
   currentEventId: string | null
   groupRef: (el: HTMLDivElement | null) => void
+  onEventKinlyClick?: (ev: FamilyEvent) => void
 }
 
-function DayGroup({ date, events, members, currentEventId, groupRef }: DayGroupProps) {
+function DayGroup({ date, events, members, currentEventId, groupRef, onEventKinlyClick }: DayGroupProps) {
   if (events.length === 0) return null
   const today   = isToday(date)
   const isPast  = toStr(date) < toStr(new Date()) && !today
@@ -265,8 +271,48 @@ function DayGroup({ date, events, members, currentEventId, groupRef }: DayGroupP
         .slice()
         .sort((a, b) => (a.time_start ?? '').localeCompare(b.time_start ?? ''))
         .map((ev) => (
-          <EventCard key={ev.id} ev={ev} members={members} isCurrent={ev.id === currentEventId} />
+          <EventCard
+            key={ev.id}
+            ev={ev}
+            members={members}
+            isCurrent={ev.id === currentEventId}
+            onKinlyClick={onEventKinlyClick ? () => onEventKinlyClick(ev) : undefined}
+          />
         ))}
+    </div>
+  )
+}
+
+// OccasionCard — shared between SidePanel and Home.tsx logic ──────────────────
+function OccasionCard({
+  label,
+  dateStr: _dateStr,
+  dateLabel,
+  onClick,
+}: {
+  label: string
+  dateStr: string
+  dateLabel: string
+  onClick?: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered && onClick ? '#FAFAF8' : '#fff',
+        border: '0.5px solid #E8E4DC',
+        borderRadius: 9,
+        padding: '10px 12px',
+        marginBottom: 7,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'background 120ms',
+      }}
+    >
+      <p style={{ fontSize: 12, fontWeight: 500, color: '#1A1A18' }}>{label}</p>
+      <p style={{ fontSize: 11, color: '#B4B2A9', marginTop: 2 }}>{dateLabel}</p>
     </div>
   )
 }
@@ -368,10 +414,13 @@ function SidePanel({ weekEvents, members, occasions, isDemo, kinlyPrefill }: Sid
             coming up
           </p>
           {upcoming.map((occ) => (
-            <div key={occ.id} style={{ background: '#fff', border: '0.5px solid #E8E4DC', borderRadius: 9, padding: '10px 12px', marginBottom: 7 }}>
-              <p style={{ fontSize: 12, fontWeight: 500, color: '#1A1A18' }}>{occ.label}</p>
-              <p style={{ fontSize: 11, color: '#B4B2A9', marginTop: 2 }}>{occasionLabel(occ.date)}</p>
-            </div>
+            <OccasionCard
+              key={occ.id}
+              label={occ.label}
+              dateStr={occ.date}
+              dateLabel={occasionLabel(occ.date)}
+              onClick={kinlyPrefill ? () => kinlyPrefill.current?.(`Help me plan for ${occ.label}`) : undefined}
+            />
           ))}
         </div>
       )}
@@ -538,6 +587,10 @@ export function CalendarScreen() {
                   groupRef={(el) => {
                     if (el) groupRefs.current[ds] = el
                     else delete groupRefs.current[ds]
+                  }}
+                  onEventKinlyClick={(ev) => {
+                    const timeLabel = ev.time_start ? ` at ${fmtTime(ev.time_start)}` : ''
+                    kinlyPrefillRef.current?.(`Tell me about "${ev.title}"${timeLabel}`)
                   }}
                 />
               )

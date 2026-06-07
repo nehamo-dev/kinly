@@ -99,6 +99,35 @@ function fmtTime(t: string | null | undefined): string {
   return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`
 }
 
+// ── OccasionRow — tappable "coming up" item ────────────────────────────────────
+
+function OccasionRow({ occ, onKinlyClick }: { occ: { id: string; label: string; date: string }; onKinlyClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onClick={onKinlyClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display:        'flex',
+        justifyContent: 'space-between',
+        alignItems:     'center',
+        padding:        '7px 4px',
+        borderBottom:   '0.5px solid #f5f5f5',
+        cursor:         'pointer',
+        borderRadius:   4,
+        background:     hovered ? '#FAFAF8' : 'transparent',
+        transition:     'background 120ms',
+      }}
+    >
+      <span style={{ fontSize: 11, color: '#1a1a1a' }}>{occ.label}</span>
+      <span style={{ fontSize: 10, color: '#bbbbbb', flexShrink: 0 }}>
+        {occasionDateLabel(occ.date)}
+      </span>
+    </div>
+  )
+}
+
 // ── Section label ──────────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -345,18 +374,11 @@ export function Home() {
               <div style={{ marginTop: 20 }}>
                 <SectionLabel>coming up</SectionLabel>
                 {occasions.slice(0, 3).map((occ) => (
-                  <div key={occ.id} style={{
-                    display:        'flex',
-                    justifyContent: 'space-between',
-                    alignItems:     'center',
-                    padding:        '6px 0',
-                    borderBottom:   '0.5px solid #f5f5f5',
-                  }}>
-                    <span style={{ fontSize: 11, color: '#1a1a1a' }}>{occ.label}</span>
-                    <span style={{ fontSize: 10, color: '#bbbbbb', flexShrink: 0 }}>
-                      {occasionDateLabel(occ.date)}
-                    </span>
-                  </div>
+                  <OccasionRow
+                    key={occ.id}
+                    occ={occ}
+                    onKinlyClick={() => kinlyPrefillRef.current?.(`Help me plan for ${occ.label}`)}
+                  />
                 ))}
               </div>
             )}
@@ -377,18 +399,11 @@ export function Home() {
             <div style={{ marginTop: 20 }}>
               <SectionLabel>coming up</SectionLabel>
               {occasions.slice(0, 3).map((occ) => (
-                <div key={occ.id} style={{
-                  display:      'flex',
-                  justifyContent: 'space-between',
-                  alignItems:   'center',
-                  padding:      '6px 0',
-                  borderBottom: '0.5px solid #f5f5f5',
-                }}>
-                  <span style={{ fontSize: 11, color: '#1a1a1a' }}>{occ.label}</span>
-                  <span style={{ fontSize: 10, color: '#bbbbbb', flexShrink: 0 }}>
-                    {occasionDateLabel(occ.date)}
-                  </span>
-                </div>
+                <OccasionRow
+                  key={occ.id}
+                  occ={occ}
+                  onKinlyClick={() => kinlyPrefillRef.current?.(`Help me plan for ${occ.label}`)}
+                />
               ))}
             </div>
           )}
